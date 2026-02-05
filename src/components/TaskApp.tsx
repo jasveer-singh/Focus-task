@@ -31,6 +31,9 @@ export default function TaskApp() {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -98,6 +101,30 @@ export default function TaskApp() {
         task.id === id ? { ...task, pinned: !task.pinned } : task
       )
     );
+  }
+
+  function startEdit(task: Task) {
+    setEditingId(task.id);
+    setEditTitle(task.title);
+    setEditNotes(task.notes);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle("");
+    setEditNotes("");
+  }
+
+  function saveEdit(id: string) {
+    if (!editTitle.trim()) return;
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === id
+          ? { ...task, title: editTitle.trim(), notes: editNotes.trim() }
+          : task
+      )
+    );
+    cancelEdit();
   }
 
   return (
@@ -171,6 +198,7 @@ export default function TaskApp() {
           ) : (
             sortedTasks.map((task, index) => {
               const isOpen = expanded[task.id];
+              const isEditing = editingId === task.id;
               const preview = clampPreview(task.notes);
               return (
                 <article
@@ -221,6 +249,13 @@ export default function TaskApp() {
                       >
                         {task.pinned ? "Pinned" : "Pin"}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => (isEditing ? cancelEdit() : startEdit(task))}
+                        className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                      >
+                        {isEditing ? "Cancel" : "Edit"}
+                      </button>
                       {task.notes ? (
                         <button
                           type="button"
@@ -239,6 +274,48 @@ export default function TaskApp() {
                       </button>
                     </div>
                   </div>
+                  {isEditing ? (
+                    <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-4">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                            Title
+                          </label>
+                          <input
+                            value={editTitle}
+                            onChange={(event) => setEditTitle(event.target.value)}
+                            className="rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                            Notes
+                          </label>
+                          <textarea
+                            value={editNotes}
+                            onChange={(event) => setEditNotes(event.target.value)}
+                            className="min-h-[120px] resize-none rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => saveEdit(task.id)}
+                            className="rounded-full bg-accent-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent-600"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="rounded-full border border-mist-200 px-4 py-2 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   {task.notes && isOpen ? (
                     <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
                       <p className="whitespace-pre-wrap text-sm text-ink-700">
