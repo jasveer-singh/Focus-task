@@ -8,6 +8,7 @@ type Task = {
   notes: string;
   completed: boolean;
   pinned: boolean;
+  dueAt: string | null;
   createdAt: number;
 };
 
@@ -34,6 +35,8 @@ export default function TaskApp() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [dueAt, setDueAt] = useState("");
+  const [editDueAt, setEditDueAt] = useState("");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -67,11 +70,13 @@ export default function TaskApp() {
       notes: notes.trim(),
       completed: false,
       pinned: false,
+      dueAt: dueAt ? new Date(dueAt).toISOString() : null,
       createdAt: Date.now()
     };
     setTasks((prev) => [newTask, ...prev]);
     setTitle("");
     setNotes("");
+    setDueAt("");
   }
 
   function toggleComplete(id: string) {
@@ -107,12 +112,14 @@ export default function TaskApp() {
     setEditingId(task.id);
     setEditTitle(task.title);
     setEditNotes(task.notes);
+    setEditDueAt(task.dueAt ? task.dueAt.slice(0, 16) : "");
   }
 
   function cancelEdit() {
     setEditingId(null);
     setEditTitle("");
     setEditNotes("");
+    setEditDueAt("");
   }
 
   function saveEdit(id: string) {
@@ -120,12 +127,60 @@ export default function TaskApp() {
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id
-          ? { ...task, title: editTitle.trim(), notes: editNotes.trim() }
+          ? {
+              ...task,
+              title: editTitle.trim(),
+              notes: editNotes.trim(),
+              dueAt: editDueAt ? new Date(editDueAt).toISOString() : null
+            }
           : task
       )
     );
     cancelEdit();
   }
+
+  function formatDueLabel(value: string | null) {
+    if (!value) return "No due date";
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return "No due date";
+    return dt.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function isOverdue(value: string | null) {
+    if (!value) return false;
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return false;
+    return dt.getTime() < Date.now();
+  }
+
+  function sectionFor(task: Task) {
+    if (!task.dueAt) return "month";
+    const now = new Date();
+    const due = new Date(task.dueAt);
+    if (Number.isNaN(due.getTime())) return "month";
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const startOfNextWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    if (due >= startOfToday && due < startOfTomorrow) return "today";
+    if (due >= startOfToday && due < startOfNextWeek) return "week";
+    if (due >= startOfToday && due < startOfNextMonth) return "month";
+    return "month";
+  }
+
+  const sectionedTasks = useMemo(() => {
+    const base = sortedTasks;
+    return {
+      today: base.filter((task) => sectionFor(task) === "today"),
+      week: base.filter((task) => sectionFor(task) === "week"),
+      month: base.filter((task) => sectionFor(task) === "month")
+    };
+  }, [sortedTasks]);
 
   return (
     <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-6 py-12 md:px-12">
@@ -179,6 +234,17 @@ export default function TaskApp() {
               className="min-h-[140px] resize-none rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
             />
           </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-ink-700">
+              Due date & time
+            </label>
+            <input
+              type="datetime-local"
+              value={dueAt}
+              onChange={(event) => setDueAt(event.target.value)}
+              className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+            />
+          </div>
           <button
             type="submit"
             className="mt-2 rounded-2xl bg-accent-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
@@ -196,136 +262,186 @@ export default function TaskApp() {
               No tasks yet. Add one to get started.
             </div>
           ) : (
-            sortedTasks.map((task, index) => {
-              const isOpen = expanded[task.id];
-              const isEditing = editingId === task.id;
-              const preview = clampPreview(task.notes);
-              return (
-                <article
-                  key={task.id}
-                  className="animate-rise rounded-3xl bg-white p-5 shadow-card"
-                  style={{ animationDelay: `${index * 40}ms` }}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <button
-                        type="button"
-                        aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
-                        onClick={() => toggleComplete(task.id)}
-                        className={`mt-1 h-5 w-5 rounded-full border transition ${
-                          task.completed
-                            ? "border-accent-500 bg-accent-500"
-                            : "border-mist-200 bg-white"
-                        }`}
-                      />
-                      <div>
-                        <h3
-                          className={`text-lg font-semibold text-ink-900 ${
-                            task.completed ? "line-through text-ink-300" : ""
-                          }`}
-                        >
-                          {task.title}
-                        </h3>
-                        {task.notes ? (
-                          <p className="mt-1 text-sm text-ink-500">
-                            {preview}
-                          </p>
-                        ) : (
-                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-ink-300">
-                            No notes
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => togglePin(task.id)}
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                          task.pinned
-                            ? "border-accent-500 text-accent-500"
-                            : "border-mist-200 text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                        }`}
-                      >
-                        {task.pinned ? "Pinned" : "Pin"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => (isEditing ? cancelEdit() : startEdit(task))}
-                        className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
-                      >
-                        {isEditing ? "Cancel" : "Edit"}
-                      </button>
-                      {task.notes ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleNotes(task.id)}
-                          className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
-                        >
-                          {isOpen ? "Hide notes" : "View notes"}
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => removeTask(task.id)}
-                        className="rounded-full border border-transparent px-3 py-1 text-xs font-semibold text-ink-300 transition hover:border-mist-200 hover:text-ink-500"
-                      >
-                        Delete
-                      </button>
-                    </div>
+            ([
+              { key: "today", label: "Due today", items: sectionedTasks.today },
+              { key: "week", label: "Due this week", items: sectionedTasks.week },
+              { key: "month", label: "Due this month", items: sectionedTasks.month }
+            ] as const).map((section) => (
+              <div key={section.key} className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-ink-300">
+                    {section.label}
+                  </h2>
+                  <span className="text-xs text-ink-300">
+                    {section.items.length} tasks
+                  </span>
+                </div>
+                {section.items.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-mist-200 bg-white/70 p-6 text-center text-xs text-ink-300">
+                    Nothing here yet.
                   </div>
-                  {isEditing ? (
-                    <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-4">
-                      <div className="flex flex-col gap-3">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
-                            Title
-                          </label>
-                          <input
-                            value={editTitle}
-                            onChange={(event) => setEditTitle(event.target.value)}
-                            className="rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-                          />
+                ) : (
+                  section.items.map((task, index) => {
+                    const isOpen = expanded[task.id];
+                    const isEditing = editingId === task.id;
+                    const preview = clampPreview(task.notes);
+                    const overdue = isOverdue(task.dueAt);
+                    return (
+                      <article
+                        key={task.id}
+                        className={`animate-rise rounded-3xl bg-white p-5 shadow-card ${
+                          overdue ? "border border-accent-500/40" : ""
+                        }`}
+                        style={{ animationDelay: `${index * 40}ms` }}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="flex items-start gap-3">
+                            <button
+                              type="button"
+                              aria-label={
+                                task.completed ? "Mark incomplete" : "Mark complete"
+                              }
+                              onClick={() => toggleComplete(task.id)}
+                              className={`mt-1 h-5 w-5 rounded-full border transition ${
+                                task.completed
+                                  ? "border-accent-500 bg-accent-500"
+                                  : "border-mist-200 bg-white"
+                              }`}
+                            />
+                            <div>
+                              <h3
+                                className={`text-lg font-semibold text-ink-900 ${
+                                  task.completed ? "line-through text-ink-300" : ""
+                                }`}
+                              >
+                                {task.title}
+                              </h3>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-300">
+                                <span>{formatDueLabel(task.dueAt)}</span>
+                                {overdue ? (
+                                  <span className="rounded-full bg-accent-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-600">
+                                    Overdue
+                                  </span>
+                                ) : null}
+                              </div>
+                              {task.notes ? (
+                                <p className="mt-2 text-sm text-ink-500">
+                                  {preview}
+                                </p>
+                              ) : (
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-ink-300">
+                                  No notes
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => togglePin(task.id)}
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                                task.pinned
+                                  ? "border-accent-500 text-accent-500"
+                                  : "border-mist-200 text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                              }`}
+                            >
+                              {task.pinned ? "Pinned" : "Pin"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                isEditing ? cancelEdit() : startEdit(task)
+                              }
+                              className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                            >
+                              {isEditing ? "Cancel" : "Edit"}
+                            </button>
+                            {task.notes ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleNotes(task.id)}
+                                className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                              >
+                                {isOpen ? "Hide notes" : "View notes"}
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => removeTask(task.id)}
+                              className="rounded-full border border-transparent px-3 py-1 text-xs font-semibold text-ink-300 transition hover:border-mist-200 hover:text-ink-500"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
-                            Notes
-                          </label>
-                          <textarea
-                            value={editNotes}
-                            onChange={(event) => setEditNotes(event.target.value)}
-                            className="min-h-[120px] resize-none rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => saveEdit(task.id)}
-                            className="rounded-full bg-accent-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent-600"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEdit}
-                            className="rounded-full border border-mist-200 px-4 py-2 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                  {task.notes && isOpen ? (
-                    <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
-                      <p className="whitespace-pre-wrap text-sm text-ink-700">
-                        {task.notes}
-                      </p>
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })
+                        {isEditing ? (
+                          <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-4">
+                            <div className="flex flex-col gap-3">
+                              <div className="flex flex-col gap-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                                  Title
+                                </label>
+                                <input
+                                  value={editTitle}
+                                  onChange={(event) => setEditTitle(event.target.value)}
+                                  className="rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                                  Notes
+                                </label>
+                                <textarea
+                                  value={editNotes}
+                                  onChange={(event) => setEditNotes(event.target.value)}
+                                  className="min-h-[120px] resize-none rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                                />
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
+                                  Due date & time
+                                </label>
+                                <input
+                                  type="datetime-local"
+                                  value={editDueAt}
+                                  onChange={(event) =>
+                                    setEditDueAt(event.target.value)
+                                  }
+                                  className="rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => saveEdit(task.id)}
+                                  className="rounded-full bg-accent-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent-600"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEdit}
+                                  className="rounded-full border border-mist-200 px-4 py-2 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                        {task.notes && isOpen ? (
+                          <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
+                            <p className="whitespace-pre-wrap text-sm text-ink-700">
+                              {task.notes}
+                            </p>
+                          </div>
+                        ) : null}
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
