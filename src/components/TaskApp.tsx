@@ -27,6 +27,69 @@ function clampPreview(text: string, limit = 140) {
   return `${cleaned.slice(0, limit)}…`;
 }
 
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderInlineMarkdown(input: string) {
+  let output = escapeHtml(input);
+  output = output.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  output = output.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  output = output.replace(/`(.+?)`/g, "<code>$1</code>");
+  output = output.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noreferrer">$1</a>'
+  );
+  output = output.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noreferrer">$1</a>'
+  );
+  return output;
+}
+
+function renderMarkdownBlocks(input: string) {
+  const lines = input.split("\n");
+  const htmlBlocks: string[] = [];
+  let inList = false;
+
+  lines.forEach((line) => {
+    const listMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if (listMatch) {
+      if (!inList) {
+        inList = true;
+        htmlBlocks.push("<ul>");
+      }
+      htmlBlocks.push(`<li>${renderInlineMarkdown(listMatch[1])}</li>`);
+      return;
+    }
+
+    if (inList) {
+      htmlBlocks.push("</ul>");
+      inList = false;
+    }
+
+    if (!line.trim()) {
+      htmlBlocks.push("<br />");
+      return;
+    }
+
+    htmlBlocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  });
+
+  if (inList) htmlBlocks.push("</ul>");
+  return htmlBlocks.join("");
+}
+
+function extractUrls(input: string) {
+  const matches = input.match(/https?:\/\/[^\s<]+/g) || [];
+  return Array.from(new Set(matches));
+}
+
 export default function TaskApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
@@ -429,13 +492,31 @@ export default function TaskApp() {
                             </div>
                           </div>
                         ) : null}
-                        {task.notes && isOpen ? (
-                          <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
-                            <p className="whitespace-pre-wrap text-sm text-ink-700">
-                              {task.notes}
-                            </p>
-                          </div>
-                        ) : null}
+                {task.notes && isOpen ? (
+                  <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
+                    <div
+                      className="prose prose-sm max-w-none text-ink-700"
+                      dangerouslySetInnerHTML={{
+                        __html: renderMarkdownBlocks(task.notes)
+                      }}
+                    />
+                    {extractUrls(task.notes).length > 0 ? (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {extractUrls(task.notes).map((url) => (
+                          <a
+                            key={url}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                          >
+                            {url}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                       </article>
                     );
                   })
