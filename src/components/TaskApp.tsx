@@ -170,6 +170,33 @@ function prefixMarkdownSelection(
   });
 }
 
+function linkMarkdownSelection(
+  ref: React.RefObject<HTMLTextAreaElement>,
+  value: string,
+  setValue: (next: string) => void
+) {
+  const element = ref.current;
+  const start = element?.selectionStart ?? value.length;
+  const end = element?.selectionEnd ?? value.length;
+  const selected = value.slice(start, end).trim() || "link text";
+  const rawUrl = window.prompt("Enter URL for selected text", "https://");
+  if (!rawUrl) return;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return;
+  const normalized = /^(https?:\/\/|mailto:)/i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+  const markdownLink = `[${selected}](${normalized})`;
+  const next = `${value.slice(0, start)}${markdownLink}${value.slice(end)}`;
+  setValue(next);
+  requestAnimationFrame(() => {
+    const target = ref.current;
+    if (!target) return;
+    target.focus();
+    target.setSelectionRange(start, start + markdownLink.length);
+  });
+}
+
 export default function TaskApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [title, setTitle] = useState("");
@@ -432,16 +459,7 @@ export default function TaskApp() {
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  wrapMarkdownSelection(
-                    notesRef,
-                    notes,
-                    setNotes,
-                    "[Link text](",
-                    ")",
-                    "https://example.com"
-                  )
-                }
+                onClick={() => linkMarkdownSelection(notesRef, notes, setNotes)}
                 className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
               >
                 Link
@@ -749,13 +767,10 @@ export default function TaskApp() {
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      wrapMarkdownSelection(
+                                      linkMarkdownSelection(
                                         editNotesRef,
                                         editNotes,
-                                        setEditNotes,
-                                        "[Link text](",
-                                        ")",
-                                        "https://example.com"
+                                        setEditNotes
                                       )
                                     }
                                     className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
