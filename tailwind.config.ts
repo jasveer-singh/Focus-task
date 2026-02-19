@@ -21,13 +21,13 @@ const config: Config = {
           200: "#DADFF0"
         },
         accent: {
-          500: "#FF7A59",
-          600: "#F56643"
+          500: "#3B82F6",
+          600: "#2563EB"
         }
       },
       boxShadow: {
         card: "0 20px 60px rgba(22, 25, 34, 0.15)",
-        glow: "0 10px 30px rgba(255, 122, 89, 0.18)"
+        glow: "0 10px 30px rgba(59, 130, 246, 0.22)"
       }
     }
   },

@@ -10,7 +10,7 @@
 
 body {
   font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: radial-gradient(circle at top left, #ffffff 0%, #f7f7fb 40%, #eef0f8 100%);
+  background: radial-gradient(circle at top left, #f8fbff 0%, #eef4ff 42%, #e2ecff 100%);
 }
 
 * {
