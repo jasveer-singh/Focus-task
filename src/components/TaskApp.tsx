@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Task = {
   id: string;
@@ -38,56 +38,136 @@ function escapeHtml(input: string) {
 
 function renderInlineMarkdown(input: string) {
   let output = escapeHtml(input);
-  output = output.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  output = output.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  output = output.replace(/`(.+?)`/g, "<code>$1</code>");
   output = output.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     '<a href="$2" target="_blank" rel="noreferrer">$1</a>'
   );
-  output = output.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" target="_blank" rel="noreferrer">$1</a>'
-  );
+  output = output.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  output = output.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  output = output.replace(/`(.+?)`/g, "<code>$1</code>");
   return output;
 }
 
 function renderMarkdownBlocks(input: string) {
   const lines = input.split("\n");
   const htmlBlocks: string[] = [];
-  let inList = false;
+  let inUnorderedList = false;
+  let inOrderedList = false;
+
+  function closeLists() {
+    if (inUnorderedList) {
+      htmlBlocks.push("</ul>");
+      inUnorderedList = false;
+    }
+    if (inOrderedList) {
+      htmlBlocks.push("</ol>");
+      inOrderedList = false;
+    }
+  }
 
   lines.forEach((line) => {
-    const listMatch = line.match(/^\s*[-*]\s+(.+)/);
-    if (listMatch) {
-      if (!inList) {
-        inList = true;
+    const unorderedListMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if (unorderedListMatch) {
+      if (!inUnorderedList) {
+        closeLists();
+        inUnorderedList = true;
         htmlBlocks.push("<ul>");
       }
-      htmlBlocks.push(`<li>${renderInlineMarkdown(listMatch[1])}</li>`);
+      htmlBlocks.push(`<li>${renderInlineMarkdown(unorderedListMatch[1])}</li>`);
       return;
     }
 
-    if (inList) {
-      htmlBlocks.push("</ul>");
-      inList = false;
+    const orderedListMatch = line.match(/^\s*\d+\.\s+(.+)/);
+    if (orderedListMatch) {
+      if (!inOrderedList) {
+        closeLists();
+        inOrderedList = true;
+        htmlBlocks.push("<ol>");
+      }
+      htmlBlocks.push(`<li>${renderInlineMarkdown(orderedListMatch[1])}</li>`);
+      return;
     }
+
+    closeLists();
 
     if (!line.trim()) {
       htmlBlocks.push("<br />");
       return;
     }
 
+    const headingMatch = line.match(/^(#{1,3})\s+(.+)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const tag = `h${level}`;
+      htmlBlocks.push(`<${tag}>${renderInlineMarkdown(headingMatch[2])}</${tag}>`);
+      return;
+    }
+
+    const quoteMatch = line.match(/^\>\s+(.+)/);
+    if (quoteMatch) {
+      htmlBlocks.push(`<blockquote>${renderInlineMarkdown(quoteMatch[1])}</blockquote>`);
+      return;
+    }
+
     htmlBlocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
   });
 
-  if (inList) htmlBlocks.push("</ul>");
+  closeLists();
   return htmlBlocks.join("");
 }
 
 function extractUrls(input: string) {
   const matches = input.match(/https?:\/\/[^\s<]+/g) || [];
   return Array.from(new Set(matches));
+}
+
+function wrapMarkdownSelection(
+  ref: React.RefObject<HTMLTextAreaElement>,
+  value: string,
+  setValue: (next: string) => void,
+  left: string,
+  right: string,
+  placeholder: string
+) {
+  const element = ref.current;
+  const start = element?.selectionStart ?? value.length;
+  const end = element?.selectionEnd ?? value.length;
+  const selected = value.slice(start, end);
+  const content = selected || placeholder;
+  const next = `${value.slice(0, start)}${left}${content}${right}${value.slice(end)}`;
+  setValue(next);
+  requestAnimationFrame(() => {
+    const target = ref.current;
+    if (!target) return;
+    target.focus();
+    target.setSelectionRange(start + left.length, start + left.length + content.length);
+  });
+}
+
+function prefixMarkdownSelection(
+  ref: React.RefObject<HTMLTextAreaElement>,
+  value: string,
+  setValue: (next: string) => void,
+  prefix: string,
+  placeholder: string
+) {
+  const element = ref.current;
+  const start = element?.selectionStart ?? value.length;
+  const end = element?.selectionEnd ?? value.length;
+  const selected = value.slice(start, end);
+  const content = selected || placeholder;
+  const prefixed = content
+    .split("\n")
+    .map((line) => `${prefix}${line}`)
+    .join("\n");
+  const next = `${value.slice(0, start)}${prefixed}${value.slice(end)}`;
+  setValue(next);
+  requestAnimationFrame(() => {
+    const target = ref.current;
+    if (!target) return;
+    target.focus();
+    target.setSelectionRange(start, start + prefixed.length);
+  });
 }
 
 export default function TaskApp() {
@@ -98,8 +178,12 @@ export default function TaskApp() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [notesMode, setNotesMode] = useState<"write" | "preview">("write");
+  const [editNotesMode, setEditNotesMode] = useState<"write" | "preview">("write");
   const [dueAt, setDueAt] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const editNotesRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -182,6 +266,7 @@ export default function TaskApp() {
     setEditingId(null);
     setEditTitle("");
     setEditNotes("");
+    setEditNotesMode("write");
     setEditDueAt("");
   }
 
@@ -290,12 +375,125 @@ export default function TaskApp() {
             <label className="text-sm font-semibold text-ink-700">
               Notes (optional)
             </label>
-            <textarea
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Key context, steps, or references. These stay hidden until opened."
-              className="min-h-[140px] resize-none rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  wrapMarkdownSelection(notesRef, notes, setNotes, "**", "**", "bold")
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Bold
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  wrapMarkdownSelection(notesRef, notes, setNotes, "*", "*", "italic")
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Italic
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  wrapMarkdownSelection(notesRef, notes, setNotes, "`", "`", "code")
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Code
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  prefixMarkdownSelection(notesRef, notes, setNotes, "- ", "list item")
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                List
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  prefixMarkdownSelection(notesRef, notes, setNotes, "## ", "Heading")
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                H2
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  prefixMarkdownSelection(notesRef, notes, setNotes, "> ", "Quoted text")
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Quote
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  wrapMarkdownSelection(
+                    notesRef,
+                    notes,
+                    setNotes,
+                    "[Link text](",
+                    ")",
+                    "https://example.com"
+                  )
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Link
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setNotes((prev) =>
+                    prev ? `${prev}\nhttps://docs.google.com/document/...` : "https://docs.google.com/document/..."
+                  )
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Google Doc
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setNotes((prev) =>
+                    prev ? `${prev}\nhttps://docs.google.com/spreadsheets/...` : "https://docs.google.com/spreadsheets/..."
+                  )
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Google Sheet
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setNotesMode((prev) => (prev === "write" ? "preview" : "write"))
+                }
+                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                {notesMode === "write" ? "Preview" : "Write"}
+              </button>
+            </div>
+            {notesMode === "write" ? (
+              <textarea
+                ref={notesRef}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Markdown supported. Add links, Google Docs, or Sheets URLs."
+                className="min-h-[140px] resize-none rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+              />
+            ) : (
+              <div className="min-h-[140px] rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
+                <div
+                  className="prose prose-sm max-w-none text-ink-700"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(notes) }}
+                />
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-ink-700">
@@ -454,11 +652,171 @@ export default function TaskApp() {
                                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
                                   Notes
                                 </label>
-                                <textarea
-                                  value={editNotes}
-                                  onChange={(event) => setEditNotes(event.target.value)}
-                                  className="min-h-[120px] resize-none rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-                                />
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "**",
+                                        "**",
+                                        "bold"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Bold
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "*",
+                                        "*",
+                                        "italic"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Italic
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "`",
+                                        "`",
+                                        "code"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Code
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      prefixMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "- ",
+                                        "list item"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    List
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      prefixMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "## ",
+                                        "Heading"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    H2
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      prefixMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "> ",
+                                        "Quoted text"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Quote
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      wrapMarkdownSelection(
+                                        editNotesRef,
+                                        editNotes,
+                                        setEditNotes,
+                                        "[Link text](",
+                                        ")",
+                                        "https://example.com"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Link
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setEditNotes((prev) =>
+                                        prev
+                                          ? `${prev}\nhttps://docs.google.com/document/...`
+                                          : "https://docs.google.com/document/..."
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Google Doc
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setEditNotes((prev) =>
+                                        prev
+                                          ? `${prev}\nhttps://docs.google.com/spreadsheets/...`
+                                          : "https://docs.google.com/spreadsheets/..."
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    Google Sheet
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setEditNotesMode((prev) =>
+                                        prev === "write" ? "preview" : "write"
+                                      )
+                                    }
+                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                                  >
+                                    {editNotesMode === "write" ? "Preview" : "Write"}
+                                  </button>
+                                </div>
+                                {editNotesMode === "write" ? (
+                                  <textarea
+                                    ref={editNotesRef}
+                                    value={editNotes}
+                                    onChange={(event) => setEditNotes(event.target.value)}
+                                    className="min-h-[120px] resize-none rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                                  />
+                                ) : (
+                                  <div className="min-h-[120px] rounded-2xl border border-mist-200 bg-white px-4 py-2">
+                                    <div
+                                      className="prose prose-sm max-w-none text-ink-700"
+                                      dangerouslySetInnerHTML={{
+                                        __html: renderMarkdownBlocks(editNotes)
+                                      }}
+                                    />
+                                  </div>
+                                )}
                               </div>
                               <div className="flex flex-col gap-2">
                                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
