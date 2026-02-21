@@ -19,6 +19,7 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  calendarEvents CalendarEvent[]
 }
 
 model Account {
@@ -55,4 +56,24 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  startAt     DateTime
+  endAt       DateTime
+  participants Json?
+  location    String?
+  meetLink    String?
+  source      String   @default("app")
+  externalId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startAt])
+  @@unique([userId, externalId])
 }
