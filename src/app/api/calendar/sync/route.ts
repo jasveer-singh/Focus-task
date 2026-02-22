@@ -7,7 +7,12 @@ export async function POST() {
     const user = await requireCurrentUser();
     const result = await syncGoogleEventsToLocal(user.id);
 
-    return NextResponse.json({ synced: result.syncedCount });
+    return NextResponse.json({
+      synced: result.syncedCount,
+      totalFromGoogle: result.totalFromGoogle,
+      skippedCancelled: result.skippedCancelled,
+      skippedInvalidTime: result.skippedInvalidTime
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

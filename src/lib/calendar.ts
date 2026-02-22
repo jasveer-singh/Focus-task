@@ -92,6 +92,16 @@ export async function getGoogleAccessTokenForUser(userId: string) {
   return payload.access_token;
 }
 
+export async function getGoogleProfileEmail(userId: string) {
+  const accessToken = await getGoogleAccessTokenForUser(userId);
+  const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  if (!response.ok) return null;
+  const payload = (await response.json()) as { email?: string };
+  return payload.email ?? null;
+}
+
 export async function listGoogleCalendarEvents(userId: string) {
   const accessToken = await getGoogleAccessTokenForUser(userId);
 
@@ -174,12 +184,20 @@ export async function syncGoogleEventsToLocal(userId: string) {
   const googleEvents = await listGoogleCalendarEvents(userId);
 
   let syncedCount = 0;
+  let skippedCancelled = 0;
+  let skippedInvalidTime = 0;
   for (const event of googleEvents) {
-    if (!event.id || event.status === "cancelled") continue;
+    if (!event.id || event.status === "cancelled") {
+      skippedCancelled += 1;
+      continue;
+    }
 
     const start = parseDateTime(event.start);
     const end = parseDateTime(event.end);
-    if (!start || !end) continue;
+    if (!start || !end) {
+      skippedInvalidTime += 1;
+      continue;
+    }
 
     const participants = (event.attendees ?? [])
       .map((entry) => entry.email)
@@ -217,5 +235,10 @@ export async function syncGoogleEventsToLocal(userId: string) {
     syncedCount += 1;
   }
 
-  return { syncedCount };
+  return {
+    totalFromGoogle: googleEvents.length,
+    syncedCount,
+    skippedCancelled,
+    skippedInvalidTime
+  };
 }

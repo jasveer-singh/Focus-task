@@ -15,6 +15,8 @@ type CalendarEvent = {
 };
 
 type ConnectionInfo = {
+  userEmail?: string | null;
+  googleProfileEmail?: string | null;
   connected: boolean;
   hasRefreshToken: boolean;
   hasAccessToken: boolean;
@@ -91,9 +93,17 @@ export default function CalendarSyncPanel() {
     setStatus(null);
     try {
       const response = await fetch("/api/calendar/sync", { method: "POST" });
-      const payload = (await response.json()) as { synced?: number; error?: string };
+      const payload = (await response.json()) as {
+        synced?: number;
+        totalFromGoogle?: number;
+        skippedCancelled?: number;
+        skippedInvalidTime?: number;
+        error?: string;
+      };
       if (!response.ok) throw new Error(payload.error || "Sync failed");
-      setStatus(`Synced ${payload.synced ?? 0} Google events.`);
+      setStatus(
+        `Google returned ${payload.totalFromGoogle ?? 0}; synced ${payload.synced ?? 0}; skipped cancelled ${payload.skippedCancelled ?? 0}; skipped invalid time ${payload.skippedInvalidTime ?? 0}.`
+      );
       await loadEvents();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Sync failed");
@@ -176,6 +186,10 @@ export default function CalendarSyncPanel() {
         <div className="mb-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-xs text-ink-500">
           {connection ? (
             <div className="flex flex-wrap items-center gap-3">
+              <span>App user: {connection.userEmail || "unknown"}</span>
+              <span>
+                Google user: {connection.googleProfileEmail || "unavailable"}
+              </span>
               <span>Connected: {connection.connected ? "yes" : "no"}</span>
               <span>Refresh token: {connection.hasRefreshToken ? "yes" : "no"}</span>
               <span>Access token: {connection.hasAccessToken ? "yes" : "no"}</span>
