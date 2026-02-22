@@ -13,7 +13,11 @@ export async function GET() {
 
     let googleProfileEmail: string | null = null;
     if (account) {
-      googleProfileEmail = await getGoogleProfileEmail(user.id);
+      try {
+        googleProfileEmail = await getGoogleProfileEmail(user.id);
+      } catch {
+        googleProfileEmail = null;
+      }
     }
 
     return NextResponse.json({
