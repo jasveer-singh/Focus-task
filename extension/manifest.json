@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Focus Task Capture",
+  "description": "Capture current page as an idea/task in Focus Task app.",
+  "version": "0.1.0",
+  "permissions": ["tabs"],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

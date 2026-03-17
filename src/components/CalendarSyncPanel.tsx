@@ -36,6 +36,7 @@ export default function CalendarSyncPanel() {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [connection, setConnection] = useState<ConnectionInfo | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [participants, setParticipants] = useState("");
@@ -204,54 +205,69 @@ export default function CalendarSyncPanel() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
-            <h3 className="text-sm font-semibold text-ink-700">Create Event</h3>
-            <div className="mt-3 flex flex-col gap-3">
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Event title"
-                className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
-              />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setCreateOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between text-left"
+            >
+              <h3 className="text-sm font-semibold text-ink-700">Create Event</h3>
+              <span className="text-xs font-semibold text-ink-500">
+                {createOpen ? "Collapse" : "Expand"}
+              </span>
+            </button>
+            {!createOpen ? (
+              <p className="mt-2 text-xs text-ink-500">
+                Click to add event title, time, participants, location, and link.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-col gap-3">
                 <input
-                  type="datetime-local"
-                  value={startAt}
-                  onChange={(event) => setStartAt(event.target.value)}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Event title"
+                  className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <input
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(event) => setStartAt(event.target.value)}
+                    className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={(event) => setEndAt(event.target.value)}
+                    className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                  />
+                </div>
+                <input
+                  value={participants}
+                  onChange={(event) => setParticipants(event.target.value)}
+                  placeholder="Participants emails (comma-separated)"
                   className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
                 />
                 <input
-                  type="datetime-local"
-                  value={endAt}
-                  onChange={(event) => setEndAt(event.target.value)}
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  placeholder="Location"
                   className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
                 />
+                <input
+                  value={meetLink}
+                  onChange={(event) => setMeetLink(event.target.value)}
+                  placeholder="Meet link"
+                  className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                />
+                <button
+                  type="button"
+                  onClick={createEvent}
+                  className="rounded-xl bg-accent-500 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
+                >
+                  Create and Sync
+                </button>
               </div>
-              <input
-                value={participants}
-                onChange={(event) => setParticipants(event.target.value)}
-                placeholder="Participants emails (comma-separated)"
-                className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
-              />
-              <input
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                placeholder="Location"
-                className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
-              />
-              <input
-                value={meetLink}
-                onChange={(event) => setMeetLink(event.target.value)}
-                placeholder="Meet link"
-                className="rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
-              />
-              <button
-                type="button"
-                onClick={createEvent}
-                className="rounded-xl bg-accent-500 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
-              >
-                Create and Sync
-              </button>
-            </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">

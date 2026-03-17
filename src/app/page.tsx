@@ -1,5 +1,6 @@
 import TaskApp from "@/components/TaskApp";
 import CalendarSyncPanel from "@/components/CalendarSyncPanel";
+import ProductivityLayer from "@/components/ProductivityLayer";
 import { auth, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -26,6 +27,7 @@ export default async function Page() {
         </form>
       </div>
       <TaskApp />
+      <ProductivityLayer />
       <CalendarSyncPanel />
     </main>
   );

@@ -224,7 +224,26 @@ export default function TaskApp() {
   }, []);
 
   useEffect(() => {
+    function reloadFromStorage() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return;
+      try {
+        const parsed = JSON.parse(stored) as Task[];
+        setTasks(parsed);
+      } catch {
+        setTasks([]);
+      }
+    }
+
+    window.addEventListener("focus-tasks-updated", reloadFromStorage);
+    return () => {
+      window.removeEventListener("focus-tasks-updated", reloadFromStorage);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    window.dispatchEvent(new Event("focus-tasks-updated"));
   }, [tasks]);
 
   const sortedTasks = useMemo(() => {
