@@ -203,24 +203,78 @@ export default function CalendarSyncPanel() {
           )}
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
-            <button
-              type="button"
-              onClick={() => setCreateOpen((prev) => !prev)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <h3 className="text-sm font-semibold text-ink-700">Create Event</h3>
-              <span className="text-xs font-semibold text-ink-500">
-                {createOpen ? "Collapse" : "Expand"}
-              </span>
-            </button>
-            {!createOpen ? (
+        {!createOpen ? (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <h3 className="text-sm font-semibold text-ink-700">Create Event</h3>
+                <span className="text-xs font-semibold text-ink-500">Expand</span>
+              </button>
               <p className="mt-2 text-xs text-ink-500">
-                Click to add event title, time, participants, location, and link.
+                Click to open the event form.
               </p>
-            ) : (
-              <div className="mt-3 flex flex-col gap-3">
+            </div>
+
+            <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
+              <h3 className="text-sm font-semibold text-ink-700">Synced Events</h3>
+              <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
+                {loading ? (
+                  <p className="text-sm text-ink-500">Loading events...</p>
+                ) : sortedEvents.length === 0 ? (
+                  <p className="text-sm text-ink-500">No events yet.</p>
+                ) : (
+                  sortedEvents.map((event) => (
+                    <article
+                      key={event.id}
+                      className="rounded-xl border border-mist-200 bg-white px-3 py-3"
+                    >
+                      <h4 className="text-sm font-semibold text-ink-900">{event.title}</h4>
+                      <p className="mt-1 text-xs text-ink-500">
+                        {new Date(event.startAt).toLocaleString()} - {new Date(event.endAt).toLocaleString()}
+                      </p>
+                      {Array.isArray(event.participants) && event.participants.length > 0 ? (
+                        <p className="mt-1 text-xs text-ink-500">
+                          Participants: {event.participants.join(", ")}
+                        </p>
+                      ) : null}
+                      {event.location ? (
+                        <p className="mt-1 text-xs text-ink-500">Location: {event.location}</p>
+                      ) : null}
+                      {event.meetLink ? (
+                        <a
+                          href={event.meetLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-block text-xs font-semibold text-accent-600 hover:underline"
+                        >
+                          Open meeting link
+                        </a>
+                      ) : null}
+                      <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-ink-300">
+                        Source: {event.source}
+                      </p>
+                    </article>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(false)}
+                className="mb-3 flex w-full items-center justify-between text-left"
+              >
+                <h3 className="text-sm font-semibold text-ink-700">Create Event</h3>
+                <span className="text-xs font-semibold text-ink-500">Collapse</span>
+              </button>
+              <div className="flex flex-col gap-3">
                 <input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
@@ -267,53 +321,53 @@ export default function CalendarSyncPanel() {
                   Create and Sync
                 </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
-            <h3 className="text-sm font-semibold text-ink-700">Synced Events</h3>
-            <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
-              {loading ? (
-                <p className="text-sm text-ink-500">Loading events...</p>
-              ) : sortedEvents.length === 0 ? (
-                <p className="text-sm text-ink-500">No events yet.</p>
-              ) : (
-                sortedEvents.map((event) => (
-                  <article
-                    key={event.id}
-                    className="rounded-xl border border-mist-200 bg-white px-3 py-3"
-                  >
-                    <h4 className="text-sm font-semibold text-ink-900">{event.title}</h4>
-                    <p className="mt-1 text-xs text-ink-500">
-                      {new Date(event.startAt).toLocaleString()} - {new Date(event.endAt).toLocaleString()}
-                    </p>
-                    {Array.isArray(event.participants) && event.participants.length > 0 ? (
+            <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
+              <h3 className="text-sm font-semibold text-ink-700">Synced Events</h3>
+              <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
+                {loading ? (
+                  <p className="text-sm text-ink-500">Loading events...</p>
+                ) : sortedEvents.length === 0 ? (
+                  <p className="text-sm text-ink-500">No events yet.</p>
+                ) : (
+                  sortedEvents.map((event) => (
+                    <article
+                      key={event.id}
+                      className="rounded-xl border border-mist-200 bg-white px-3 py-3"
+                    >
+                      <h4 className="text-sm font-semibold text-ink-900">{event.title}</h4>
                       <p className="mt-1 text-xs text-ink-500">
-                        Participants: {event.participants.join(", ")}
+                        {new Date(event.startAt).toLocaleString()} - {new Date(event.endAt).toLocaleString()}
                       </p>
-                    ) : null}
-                    {event.location ? (
-                      <p className="mt-1 text-xs text-ink-500">Location: {event.location}</p>
-                    ) : null}
-                    {event.meetLink ? (
-                      <a
-                        href={event.meetLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-block text-xs font-semibold text-accent-600 hover:underline"
-                      >
-                        Open meeting link
-                      </a>
-                    ) : null}
-                    <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-ink-300">
-                      Source: {event.source}
-                    </p>
-                  </article>
-                ))
-              )}
+                      {Array.isArray(event.participants) && event.participants.length > 0 ? (
+                        <p className="mt-1 text-xs text-ink-500">
+                          Participants: {event.participants.join(", ")}
+                        </p>
+                      ) : null}
+                      {event.location ? (
+                        <p className="mt-1 text-xs text-ink-500">Location: {event.location}</p>
+                      ) : null}
+                      {event.meetLink ? (
+                        <a
+                          href={event.meetLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-block text-xs font-semibold text-accent-600 hover:underline"
+                        >
+                          Open meeting link
+                        </a>
+                      ) : null}
+                      <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-ink-300">
+                        Source: {event.source}
+                      </p>
+                    </article>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {status ? <p className="mt-4 text-sm text-ink-500">{status}</p> : null}
       </div>
