@@ -199,6 +199,7 @@ function linkMarkdownSelection(
 
 export default function TaskApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -211,22 +212,32 @@ export default function TaskApp() {
   const [editDueAt, setEditDueAt] = useState("");
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const editNotesRef = useRef<HTMLTextAreaElement>(null);
+  const ignoreNextStorageSyncRef = useRef(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as Task[];
-      setTasks(parsed);
-    } catch {
-      setTasks([]);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Task[];
+        setTasks(parsed);
+      } catch {
+        setTasks([]);
+      }
     }
+    setHasHydrated(true);
   }, []);
 
   useEffect(() => {
     function reloadFromStorage() {
+      if (ignoreNextStorageSyncRef.current) {
+        ignoreNextStorageSyncRef.current = false;
+        return;
+      }
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) return;
+      if (!stored) {
+        setTasks([]);
+        return;
+      }
       try {
         const parsed = JSON.parse(stored) as Task[];
         setTasks(parsed);
@@ -242,9 +253,11 @@ export default function TaskApp() {
   }, []);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    ignoreNextStorageSyncRef.current = true;
     window.dispatchEvent(new Event("focus-tasks-updated"));
-  }, [tasks]);
+  }, [hasHydrated, tasks]);
 
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {

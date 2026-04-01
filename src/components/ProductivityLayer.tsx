@@ -94,6 +94,9 @@ export default function ProductivityLayer() {
   const [ideaTitle, setIdeaTitle] = useState("");
   const [ideaNotes, setIdeaNotes] = useState("");
   const [ideaCaptureOpen, setIdeaCaptureOpen] = useState(false);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
+  const [editingIdeaTitle, setEditingIdeaTitle] = useState("");
+  const [editingIdeaNotes, setEditingIdeaNotes] = useState("");
 
   function reload() {
     setTasks(readJson<LocalTask[]>(TASK_STORAGE_KEY, []));
@@ -295,6 +298,39 @@ export default function ProductivityLayer() {
     setIdeaCaptureOpen(false);
   }
 
+  function startIdeaEdit(item: IdeaItem) {
+    setEditingIdeaId(item.id);
+    setEditingIdeaTitle(item.title);
+    setEditingIdeaNotes(item.notes);
+  }
+
+  function cancelIdeaEdit() {
+    setEditingIdeaId(null);
+    setEditingIdeaTitle("");
+    setEditingIdeaNotes("");
+  }
+
+  function saveIdeaEdit(idValue: string) {
+    if (!editingIdeaTitle.trim()) return;
+    const next = ideas.map((item) =>
+      item.id === idValue
+        ? { ...item, title: editingIdeaTitle.trim(), notes: editingIdeaNotes.trim() }
+        : item
+    );
+    setIdeas(next);
+    writeJson(IDEAS_STORAGE_KEY, next);
+    cancelIdeaEdit();
+  }
+
+  function deleteIdea(idValue: string) {
+    const next = ideas.filter((item) => item.id !== idValue);
+    setIdeas(next);
+    writeJson(IDEAS_STORAGE_KEY, next);
+    if (editingIdeaId === idValue) {
+      cancelIdeaEdit();
+    }
+  }
+
   const actionQueue = useMemo(() => {
     return tasks
       .filter((task) => !task.completed && task.dueAt)
@@ -490,14 +526,79 @@ export default function ProductivityLayer() {
             ) : (
               ideas.slice(0, 10).map((item) => (
                 <article key={item.id} className="rounded-xl border border-mist-200 bg-mist-50 p-3">
-                  <p className="text-sm font-semibold text-ink-900">{item.title}</p>
-                  {item.notes ? <p className="mt-1 text-sm text-ink-500">{item.notes}</p> : null}
-                  {item.sourceUrl ? (
-                    <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-accent-600 hover:underline">
-                      Source page
-                    </a>
-                  ) : null}
-                  <p className="mt-1 text-xs text-ink-300">{new Date(item.createdAt).toLocaleString()}</p>
+                  {editingIdeaId === item.id ? (
+                    <div className="space-y-2">
+                      <input
+                        value={editingIdeaTitle}
+                        onChange={(event) => setEditingIdeaTitle(event.target.value)}
+                        className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                      />
+                      <textarea
+                        value={editingIdeaNotes}
+                        onChange={(event) => setEditingIdeaNotes(event.target.value)}
+                        className="min-h-[90px] w-full resize-none rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => saveIdeaEdit(item.id)}
+                          className="rounded-xl bg-accent-500 px-3 py-2 text-xs font-semibold text-white hover:bg-accent-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelIdeaEdit}
+                          className="rounded-xl border border-mist-200 px-3 py-2 text-xs font-semibold text-ink-500"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteIdea(item.id)}
+                          className="rounded-xl border border-mist-200 px-3 py-2 text-xs font-semibold text-ink-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-ink-900">{item.title}</p>
+                          {item.notes ? <p className="mt-1 text-sm text-ink-500">{item.notes}</p> : null}
+                          {item.sourceUrl ? (
+                            <a
+                              href={item.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-block text-xs text-accent-600 hover:underline"
+                            >
+                              Source page
+                            </a>
+                          ) : null}
+                          <p className="mt-1 text-xs text-ink-300">{new Date(item.createdAt).toLocaleString()}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startIdeaEdit(item)}
+                            className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteIdea(item.id)}
+                            className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </article>
               ))
             )}
