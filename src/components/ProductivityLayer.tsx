@@ -617,7 +617,7 @@ export default function ProductivityLayer() {
               <p className="text-sm text-ink-500">No ideas captured yet.</p>
             ) : (
               ideas.slice(0, 10).map((item) => (
-                <article key={item.id} className="rounded-xl border border-mist-200 bg-mist-50 p-3">
+                <article key={item.id} className="relative rounded-xl border border-mist-200 bg-mist-50 p-3">
                   {editingIdeaId === item.id ? (
                     <div className="space-y-2">
                       <input
@@ -656,7 +656,7 @@ export default function ProductivityLayer() {
                     </div>
                   ) : (
                     <>
-                      <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="pr-12">
                         <div>
                           <p className="text-sm font-semibold text-ink-900">{item.title}</p>
                           {item.notes ? (
@@ -677,7 +677,7 @@ export default function ProductivityLayer() {
                           ) : null}
                           <p className="mt-1 text-xs text-ink-300">{new Date(item.createdAt).toLocaleString()}</p>
                         </div>
-                        <div className="relative">
+                        <div className="absolute right-3 top-3">
                           <button
                             type="button"
                             onClick={() =>
