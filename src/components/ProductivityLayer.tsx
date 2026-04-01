@@ -42,6 +42,8 @@ const REMINDER_STORAGE_KEY = "focus-task-reminder-meta-v1";
 const FEEDBACK_STORAGE_KEY = "focus-feedback-v1";
 const IDEAS_STORAGE_KEY = "focus-ideas-v1";
 
+type ProductivityModule = "reminders" | "feedback" | "ideas";
+
 function escapeHtml(input: string) {
   return input
     .replace(/&/g, "&amp;")
@@ -165,7 +167,11 @@ function isTaskOverdue(task: LocalTask) {
   return Number.isFinite(due) && due < Date.now();
 }
 
-export default function ProductivityLayer() {
+export default function ProductivityLayer({
+  activeModule
+}: {
+  activeModule: ProductivityModule;
+}) {
   const [tasks, setTasks] = useState<LocalTask[]>([]);
   const [followups, setFollowups] = useState<Record<string, FollowUpState>>({});
   const [reminderMeta, setReminderMeta] = useState<Record<string, ReminderMeta>>({});
@@ -432,7 +438,8 @@ export default function ProductivityLayer() {
 
   return (
     <section className="mx-auto w-full max-w-6xl space-y-6 px-6 pb-10 md:px-12">
-      <div className="rounded-3xl bg-white p-6 shadow-card">
+      {activeModule === "reminders" ? (
+        <div className="rounded-3xl bg-white p-6 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Execution Engine</p>
@@ -504,8 +511,9 @@ export default function ProductivityLayer() {
           )}
         </div>
       </div>
+      ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {activeModule === "feedback" ? (
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <div className="flex items-center justify-between">
             <h3 className="font-display text-xl font-semibold text-ink-900">Feedback Tracker</h3>
@@ -567,7 +575,9 @@ export default function ProductivityLayer() {
             )}
           </div>
         </div>
+      ) : null}
 
+      {activeModule === "ideas" ? (
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-display text-xl font-semibold text-ink-900">Ideas Inbox</h3>
@@ -715,7 +725,7 @@ export default function ProductivityLayer() {
             )}
           </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }

@@ -390,7 +390,7 @@ export default function TaskApp() {
   }, [sortedTasks]);
 
   return (
-    <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-6 py-12 md:px-12">
+    <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 md:px-12">
       <header className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
