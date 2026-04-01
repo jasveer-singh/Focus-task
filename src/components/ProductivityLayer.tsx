@@ -42,6 +42,95 @@ const REMINDER_STORAGE_KEY = "focus-task-reminder-meta-v1";
 const FEEDBACK_STORAGE_KEY = "focus-feedback-v1";
 const IDEAS_STORAGE_KEY = "focus-ideas-v1";
 
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderInlineMarkdown(input: string) {
+  let output = escapeHtml(input);
+  output = output.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noreferrer">$1</a>'
+  );
+  output = output.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  output = output.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  output = output.replace(/`(.+?)`/g, "<code>$1</code>");
+  return output;
+}
+
+function renderMarkdownBlocks(input: string) {
+  const lines = input.split("\n");
+  const htmlBlocks: string[] = [];
+  let inUnorderedList = false;
+  let inOrderedList = false;
+
+  function closeLists() {
+    if (inUnorderedList) {
+      htmlBlocks.push("</ul>");
+      inUnorderedList = false;
+    }
+    if (inOrderedList) {
+      htmlBlocks.push("</ol>");
+      inOrderedList = false;
+    }
+  }
+
+  lines.forEach((line) => {
+    const unorderedListMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if (unorderedListMatch) {
+      if (!inUnorderedList) {
+        closeLists();
+        inUnorderedList = true;
+        htmlBlocks.push("<ul>");
+      }
+      htmlBlocks.push(`<li>${renderInlineMarkdown(unorderedListMatch[1])}</li>`);
+      return;
+    }
+
+    const orderedListMatch = line.match(/^\s*\d+\.\s+(.+)/);
+    if (orderedListMatch) {
+      if (!inOrderedList) {
+        closeLists();
+        inOrderedList = true;
+        htmlBlocks.push("<ol>");
+      }
+      htmlBlocks.push(`<li>${renderInlineMarkdown(orderedListMatch[1])}</li>`);
+      return;
+    }
+
+    closeLists();
+
+    if (!line.trim()) {
+      htmlBlocks.push("<br />");
+      return;
+    }
+
+    const headingMatch = line.match(/^(#{1,3})\s+(.+)/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const tag = `h${level}`;
+      htmlBlocks.push(`<${tag}>${renderInlineMarkdown(headingMatch[2])}</${tag}>`);
+      return;
+    }
+
+    const quoteMatch = line.match(/^\>\s+(.+)/);
+    if (quoteMatch) {
+      htmlBlocks.push(`<blockquote>${renderInlineMarkdown(quoteMatch[1])}</blockquote>`);
+      return;
+    }
+
+    htmlBlocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  });
+
+  closeLists();
+  return htmlBlocks.join("");
+}
+
 function id() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -97,6 +186,7 @@ export default function ProductivityLayer() {
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [editingIdeaTitle, setEditingIdeaTitle] = useState("");
   const [editingIdeaNotes, setEditingIdeaNotes] = useState("");
+  const [openIdeaMenuId, setOpenIdeaMenuId] = useState<string | null>(null);
 
   function reload() {
     setTasks(readJson<LocalTask[]>(TASK_STORAGE_KEY, []));
@@ -302,6 +392,7 @@ export default function ProductivityLayer() {
     setEditingIdeaId(item.id);
     setEditingIdeaTitle(item.title);
     setEditingIdeaNotes(item.notes);
+    setOpenIdeaMenuId(null);
   }
 
   function cancelIdeaEdit() {
@@ -326,6 +417,7 @@ export default function ProductivityLayer() {
     const next = ideas.filter((item) => item.id !== idValue);
     setIdeas(next);
     writeJson(IDEAS_STORAGE_KEY, next);
+    setOpenIdeaMenuId((current) => (current === idValue ? null : current));
     if (editingIdeaId === idValue) {
       cancelIdeaEdit();
     }
@@ -567,7 +659,12 @@ export default function ProductivityLayer() {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           <p className="text-sm font-semibold text-ink-900">{item.title}</p>
-                          {item.notes ? <p className="mt-1 text-sm text-ink-500">{item.notes}</p> : null}
+                          {item.notes ? (
+                            <div
+                              className="prose prose-sm mt-1 max-w-none text-ink-500"
+                              dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(item.notes) }}
+                            />
+                          ) : null}
                           {item.sourceUrl ? (
                             <a
                               href={item.sourceUrl}
@@ -580,21 +677,35 @@ export default function ProductivityLayer() {
                           ) : null}
                           <p className="mt-1 text-xs text-ink-300">{new Date(item.createdAt).toLocaleString()}</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="relative">
                           <button
                             type="button"
-                            onClick={() => startIdeaEdit(item)}
+                            onClick={() =>
+                              setOpenIdeaMenuId((current) => (current === item.id ? null : item.id))
+                            }
                             className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                            aria-label="Idea actions"
                           >
-                            Edit
+                            ...
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteIdea(item.id)}
-                            className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                          >
-                            Delete
-                          </button>
+                          {openIdeaMenuId === item.id ? (
+                            <div className="absolute right-0 z-10 mt-2 min-w-[120px] rounded-xl border border-mist-200 bg-white p-1 shadow-card">
+                              <button
+                                type="button"
+                                onClick={() => startIdeaEdit(item)}
+                                className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-ink-500 hover:bg-mist-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteIdea(item.id)}
+                                className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-500 hover:bg-red-50"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </>
