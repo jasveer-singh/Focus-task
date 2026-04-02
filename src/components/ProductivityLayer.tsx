@@ -154,6 +154,11 @@ function writeJson<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function autoResizeTextarea(element: HTMLTextAreaElement) {
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
+}
+
 function updateTask(taskId: string, updater: (task: LocalTask) => LocalTask) {
   const tasks = readJson<LocalTask[]>(TASK_STORAGE_KEY, []);
   const next = tasks.map((task) => (task.id === taskId ? updater(task) : task));
@@ -185,6 +190,10 @@ export default function ProductivityLayer({
   const [feedbackFrom, setFeedbackFrom] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [feedbackDueAt, setFeedbackDueAt] = useState("");
+  const [editingFeedbackId, setEditingFeedbackId] = useState<string | null>(null);
+  const [editingFeedbackFrom, setEditingFeedbackFrom] = useState("");
+  const [editingFeedbackMessage, setEditingFeedbackMessage] = useState("");
+  const [editingFeedbackDueAt, setEditingFeedbackDueAt] = useState("");
 
   const [ideaTitle, setIdeaTitle] = useState("");
   const [ideaNotes, setIdeaNotes] = useState("");
@@ -377,6 +386,46 @@ export default function ProductivityLayer({
     writeJson(FEEDBACK_STORAGE_KEY, next);
   }
 
+  function startFeedbackEdit(item: FeedbackItem) {
+    setEditingFeedbackId(item.id);
+    setEditingFeedbackFrom(item.from);
+    setEditingFeedbackMessage(item.message);
+    setEditingFeedbackDueAt(item.dueAt ? item.dueAt.slice(0, 16) : "");
+  }
+
+  function cancelFeedbackEdit() {
+    setEditingFeedbackId(null);
+    setEditingFeedbackFrom("");
+    setEditingFeedbackMessage("");
+    setEditingFeedbackDueAt("");
+  }
+
+  function saveFeedbackEdit(idValue: string) {
+    if (!editingFeedbackFrom.trim() || !editingFeedbackMessage.trim()) return;
+    const next = feedback.map((item) =>
+      item.id === idValue
+        ? {
+            ...item,
+            from: editingFeedbackFrom.trim(),
+            message: editingFeedbackMessage.trim(),
+            dueAt: editingFeedbackDueAt ? new Date(editingFeedbackDueAt).toISOString() : null
+          }
+        : item
+    );
+    setFeedback(next);
+    writeJson(FEEDBACK_STORAGE_KEY, next);
+    cancelFeedbackEdit();
+  }
+
+  function deleteFeedback(idValue: string) {
+    const next = feedback.filter((item) => item.id !== idValue);
+    setFeedback(next);
+    writeJson(FEEDBACK_STORAGE_KEY, next);
+    if (editingFeedbackId === idValue) {
+      cancelFeedbackEdit();
+    }
+  }
+
   function addIdea() {
     if (!ideaTitle.trim()) return;
     const item: IdeaItem = {
@@ -528,9 +577,12 @@ export default function ProductivityLayer({
             />
             <textarea
               value={feedbackMessage}
-              onChange={(event) => setFeedbackMessage(event.target.value)}
+              onChange={(event) => {
+                setFeedbackMessage(event.target.value);
+                autoResizeTextarea(event.currentTarget);
+              }}
               placeholder="What did they say?"
-              className="min-h-[90px] w-full resize-none rounded-xl border border-mist-200 bg-mist-50 px-3 py-2 text-sm outline-none focus:border-accent-500"
+              className="min-h-[90px] w-full resize-none overflow-hidden rounded-xl border border-mist-200 bg-mist-50 px-3 py-2 text-sm outline-none focus:border-accent-500"
             />
             <input
               type="datetime-local"
@@ -556,25 +608,92 @@ export default function ProductivityLayer({
             ) : (
               feedback.slice(0, 8).map((item) => (
                 <article key={item.id} className="rounded-xl border border-mist-200 bg-mist-50 p-3">
-                  <p className="text-sm font-semibold text-ink-900">{item.from}</p>
-                  <p className="mt-1 text-sm text-ink-500">{item.message}</p>
-                  <p className="mt-1 text-xs text-ink-300">{new Date(item.receivedAt).toLocaleString()}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {(["new", "planned", "in-progress", "done"] as const).map((status) => (
-                      <button
-                        key={status}
-                        type="button"
-                        onClick={() => updateFeedbackStatus(item.id, status)}
-                        className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
-                          item.status === status
-                            ? "border-accent-500 text-accent-600"
-                            : "border-mist-200 text-ink-400"
-                        }`}
-                      >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
+                  {editingFeedbackId === item.id ? (
+                    <div className="space-y-2">
+                      <input
+                        value={editingFeedbackFrom}
+                        onChange={(event) => setEditingFeedbackFrom(event.target.value)}
+                        className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                      />
+                      <textarea
+                        value={editingFeedbackMessage}
+                        onChange={(event) => {
+                          setEditingFeedbackMessage(event.target.value);
+                          autoResizeTextarea(event.currentTarget);
+                        }}
+                        className="min-h-[90px] w-full resize-none overflow-hidden rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                      />
+                      <input
+                        type="datetime-local"
+                        value={editingFeedbackDueAt}
+                        onChange={(event) => setEditingFeedbackDueAt(event.target.value)}
+                        className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => saveFeedbackEdit(item.id)}
+                          className="rounded-xl bg-accent-500 px-3 py-2 text-xs font-semibold text-white hover:bg-accent-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelFeedbackEdit}
+                          className="rounded-xl border border-mist-200 px-3 py-2 text-xs font-semibold text-ink-500"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteFeedback(item.id)}
+                          className="rounded-xl border border-mist-200 px-3 py-2 text-xs font-semibold text-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-ink-900">{item.from}</p>
+                          <div
+                            className="prose prose-sm mt-1 max-w-none text-ink-500"
+                            dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(item.message) }}
+                          />
+                          <p className="mt-1 text-xs text-ink-300">
+                            {new Date(item.receivedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => startFeedbackEdit(item)}
+                            className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {(["new", "planned", "in-progress", "done"] as const).map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => updateFeedbackStatus(item.id, status)}
+                            className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                              item.status === status
+                                ? "border-accent-500 text-accent-600"
+                                : "border-mist-200 text-ink-400"
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </article>
               ))
             )}
