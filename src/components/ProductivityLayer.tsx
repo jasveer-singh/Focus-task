@@ -515,8 +515,9 @@ export default function ProductivityLayer({
 
       {activeModule === "feedback" ? (
         <div className="rounded-3xl bg-white p-6 shadow-card">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-xl font-semibold text-ink-900">Feedback Tracker</h3>
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Create new</p>
+            <h3 className="mt-2 font-display text-xl font-semibold text-ink-900">New feedback item</h3>
           </div>
           <div className="mt-3 space-y-2">
             <input
@@ -544,6 +545,10 @@ export default function ProductivityLayer({
             >
               Add feedback
             </button>
+          </div>
+          <div className="mt-6">
+            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Existing</p>
+            <h4 className="mt-2 text-lg font-semibold text-ink-900">Captured feedback</h4>
           </div>
           <div className="mt-4 space-y-2">
             {feedback.length === 0 ? (
@@ -580,14 +585,19 @@ export default function ProductivityLayer({
       {activeModule === "ideas" ? (
         <div className="rounded-3xl bg-white p-6 shadow-card">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-display text-xl font-semibold text-ink-900">Ideas Inbox</h3>
-            <button
-              type="button"
-              onClick={() => setIdeaCaptureOpen(true)}
-              className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-            >
-              Quick capture (Cmd/Ctrl+Shift+I)
-            </button>
+            <div>
+              <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Create new</p>
+              <h3 className="mt-2 font-display text-xl font-semibold text-ink-900">New idea</h3>
+            </div>
+            {!ideaCaptureOpen ? (
+              <button
+                type="button"
+                onClick={() => setIdeaCaptureOpen(true)}
+                className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+              >
+                Quick capture (Cmd/Ctrl+Shift+I)
+              </button>
+            ) : null}
           </div>
           {ideaCaptureOpen ? (
             <div className="mt-3 space-y-2 rounded-xl border border-mist-200 bg-mist-50 p-3">
@@ -622,6 +632,10 @@ export default function ProductivityLayer({
             </div>
           ) : null}
 
+          <div className="mt-6">
+            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Existing</p>
+            <h4 className="mt-2 text-lg font-semibold text-ink-900">Captured ideas</h4>
+          </div>
           <div className="mt-4 space-y-2">
             {ideas.length === 0 ? (
               <p className="text-sm text-ink-500">No ideas captured yet.</p>

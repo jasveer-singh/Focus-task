@@ -205,6 +205,10 @@ export default function CalendarSyncPanel() {
 
         {!createOpen ? (
           <div className="space-y-4">
+            <div>
+              <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Create new</p>
+              <h3 className="mt-2 text-lg font-semibold text-ink-900">New event</h3>
+            </div>
             <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
               <button
                 type="button"
@@ -219,8 +223,11 @@ export default function CalendarSyncPanel() {
               </p>
             </div>
 
+            <div>
+              <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Existing</p>
+              <h3 className="mt-2 text-lg font-semibold text-ink-900">Synced events</h3>
+            </div>
             <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
-              <h3 className="text-sm font-semibold text-ink-700">Synced Events</h3>
               <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
                 {loading ? (
                   <p className="text-sm text-ink-500">Loading events...</p>
@@ -265,7 +272,12 @@ export default function CalendarSyncPanel() {
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Create new</p>
+                <h3 className="mt-2 text-lg font-semibold text-ink-900">New event</h3>
+              </div>
+              <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
@@ -322,10 +334,15 @@ export default function CalendarSyncPanel() {
                 </button>
               </div>
             </div>
+            </div>
 
-            <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
-              <h3 className="text-sm font-semibold text-ink-700">Synced Events</h3>
-              <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Existing</p>
+                <h3 className="mt-2 text-lg font-semibold text-ink-900">Synced events</h3>
+              </div>
+              <div className="rounded-2xl border border-mist-200 bg-mist-50 p-4">
+                <div className="mt-3 max-h-[420px] space-y-2 overflow-auto pr-1">
                 {loading ? (
                   <p className="text-sm text-ink-500">Loading events...</p>
                 ) : sortedEvents.length === 0 ? (
@@ -365,6 +382,7 @@ export default function CalendarSyncPanel() {
                   ))
                 )}
               </div>
+            </div>
             </div>
           </div>
         )}

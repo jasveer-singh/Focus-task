@@ -412,29 +412,34 @@ export default function TaskApp() {
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[1.1fr_1.4fr]">
-        <form
-          className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-card"
-          onSubmit={(event) => {
-            event.preventDefault();
-            addTask();
-          }}
-        >
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-ink-700">
-              Task title
-            </label>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Draft outreach email"
-              className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-            />
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Create new</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink-900">New task</h2>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-ink-700">
-              Notes (optional)
-            </label>
-            <div className="flex flex-wrap gap-2">
+          <form
+            className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-card"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addTask();
+            }}
+          >
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-ink-700">
+                Task title
+              </label>
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Draft outreach email"
+                className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-ink-700">
+                Notes (optional)
+              </label>
+              <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() =>
@@ -528,46 +533,51 @@ export default function TaskApp() {
                 {notesMode === "write" ? "Preview" : "Write"}
               </button>
             </div>
-            {notesMode === "write" ? (
-              <textarea
-                ref={notesRef}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Markdown supported. Add links, Google Docs, or Sheets URLs."
-                className="min-h-[140px] resize-none rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-              />
-            ) : (
-              <div className="min-h-[140px] rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
-                <div
-                  className="prose prose-sm max-w-none text-ink-700"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(notes) }}
+              {notesMode === "write" ? (
+                <textarea
+                  ref={notesRef}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Markdown supported. Add links, Google Docs, or Sheets URLs."
+                  className="min-h-[140px] resize-none rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
                 />
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-ink-700">
-              Due date & time
-            </label>
-            <input
-              type="datetime-local"
-              value={dueAt}
-              onChange={(event) => setDueAt(event.target.value)}
-              className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-            />
-          </div>
-          <button
-            type="submit"
-            className="mt-2 rounded-2xl bg-accent-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
-          >
-            Add task
-          </button>
-          <p className="text-xs text-ink-300">
-            Everything is stored locally in your browser.
-          </p>
-        </form>
+              ) : (
+                <div className="min-h-[140px] rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
+                  <div
+                    className="prose prose-sm max-w-none text-ink-700"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(notes) }}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-ink-700">
+                Due date & time
+              </label>
+              <input
+                type="datetime-local"
+                value={dueAt}
+                onChange={(event) => setDueAt(event.target.value)}
+                className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+              />
+            </div>
+            <button
+              type="submit"
+              className="mt-2 rounded-2xl bg-accent-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
+            >
+              Add task
+            </button>
+            <p className="text-xs text-ink-300">
+              Everything is stored locally in your browser.
+            </p>
+          </form>
+        </div>
 
         <div className="flex flex-col gap-4">
+          <div>
+            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Existing</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink-900">Created tasks</h2>
+          </div>
           {sortedTasks.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-mist-200 bg-white/70 p-10 text-center text-sm text-ink-500">
               No tasks yet. Add one to get started.
