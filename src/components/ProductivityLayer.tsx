@@ -562,7 +562,7 @@ export default function ProductivityLayer({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-ink-900">{item.from}</p>
                           <div
-                            className="prose prose-sm mt-1 max-w-none text-ink-500"
+                            className="markdown-rendered mt-1"
                             dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.message) }}
                           />
                           <p className="mt-1 text-xs text-ink-300">
@@ -707,7 +707,7 @@ export default function ProductivityLayer({
                           <p className="text-sm font-semibold text-ink-900">{item.title}</p>
                           {item.notes ? (
                             <div
-                              className="prose prose-sm mt-1 max-w-none text-ink-500"
+                              className="markdown-rendered mt-1"
                               dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.notes) }}
                             />
                           ) : null}

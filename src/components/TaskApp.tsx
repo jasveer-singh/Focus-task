@@ -478,7 +478,7 @@ export default function TaskApp() {
                 {task.notes && isOpen ? (
                   <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
                     <div
-                      className="prose prose-sm max-w-none text-ink-700"
+                      className="markdown-rendered"
                       dangerouslySetInnerHTML={{
                         __html: renderMarkdownToHtml(task.notes)
                       }}

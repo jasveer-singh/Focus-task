@@ -44,3 +44,170 @@ body {
 .animate-fade {
   animation: fadeIn 350ms ease-out both;
 }
+
+.markdown-rendered {
+  color: #334155;
+  line-height: 1.7;
+  font-size: 0.98rem;
+}
+
+.markdown-rendered > * + * {
+  margin-top: 0.75rem;
+}
+
+.markdown-rendered h1,
+.markdown-rendered h2,
+.markdown-rendered h3,
+.markdown-rendered h4,
+.markdown-rendered h5,
+.markdown-rendered h6 {
+  color: #111827;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.markdown-rendered h1 {
+  font-size: 1.75rem;
+}
+
+.markdown-rendered h2 {
+  font-size: 1.45rem;
+}
+
+.markdown-rendered h3 {
+  font-size: 1.2rem;
+}
+
+.markdown-rendered h4,
+.markdown-rendered h5,
+.markdown-rendered h6 {
+  font-size: 1rem;
+}
+
+.markdown-rendered p {
+  margin: 0;
+}
+
+.markdown-rendered a {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-rendered strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.markdown-rendered em {
+  font-style: italic;
+}
+
+.markdown-rendered code {
+  border: 1px solid #dbe4f6;
+  background: #f8fbff;
+  color: #1f2937;
+  border-radius: 0.5rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.9em;
+}
+
+.markdown-rendered pre {
+  overflow-x: auto;
+  border: 1px solid #dbe4f6;
+  background: #f8fbff;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.markdown-rendered pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-rendered ul,
+.markdown-rendered ol {
+  margin: 0.6rem 0 0.6rem 1.25rem;
+  padding-left: 1rem;
+}
+
+.markdown-rendered ul {
+  list-style: disc;
+}
+
+.markdown-rendered ol {
+  list-style: decimal;
+}
+
+.markdown-rendered li + li {
+  margin-top: 0.3rem;
+}
+
+.markdown-rendered li > ul,
+.markdown-rendered li > ol {
+  margin-top: 0.35rem;
+}
+
+.markdown-rendered ul.contains-task-list,
+.markdown-rendered ol.contains-task-list {
+  list-style: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.markdown-rendered .task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.markdown-rendered .task-list-item input[type="checkbox"] {
+  margin-top: 0.28rem;
+  accent-color: #2563eb;
+}
+
+.markdown-rendered blockquote {
+  margin: 0.9rem 0;
+  border-left: 4px solid #93c5fd;
+  background: #f8fbff;
+  color: #475569;
+  border-radius: 0 0.9rem 0.9rem 0;
+  padding: 0.8rem 1rem;
+}
+
+.markdown-rendered hr {
+  border: 0;
+  border-top: 1px solid #dbe4f6;
+  margin: 1rem 0;
+}
+
+.markdown-rendered table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid #dbe4f6;
+  border-radius: 1rem;
+  font-size: 0.94rem;
+}
+
+.markdown-rendered thead {
+  background: #f8fbff;
+}
+
+.markdown-rendered th,
+.markdown-rendered td {
+  border-bottom: 1px solid #dbe4f6;
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-rendered th {
+  color: #111827;
+  font-weight: 600;
+}

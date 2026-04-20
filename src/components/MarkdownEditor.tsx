@@ -292,7 +292,7 @@ export default function MarkdownEditor({
         <div className="min-h-[140px] rounded-b-2xl px-4 py-3">
           {value.trim() ? (
             <div
-              className="prose prose-sm max-w-none text-ink-700"
+              className="markdown-rendered"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ) : (
