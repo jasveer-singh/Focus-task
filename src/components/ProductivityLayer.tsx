@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import MarkdownEditor from "@/components/MarkdownEditor";
+import { renderMarkdownToHtml } from "@/lib/markdown";
+
 type LocalTask = {
   id: string;
   title: string;
@@ -44,95 +47,6 @@ const IDEAS_STORAGE_KEY = "focus-ideas-v1";
 
 type ProductivityModule = "reminders" | "feedback" | "ideas";
 
-function escapeHtml(input: string) {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function renderInlineMarkdown(input: string) {
-  let output = escapeHtml(input);
-  output = output.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noreferrer">$1</a>'
-  );
-  output = output.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  output = output.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  output = output.replace(/`(.+?)`/g, "<code>$1</code>");
-  return output;
-}
-
-function renderMarkdownBlocks(input: string) {
-  const lines = input.split("\n");
-  const htmlBlocks: string[] = [];
-  let inUnorderedList = false;
-  let inOrderedList = false;
-
-  function closeLists() {
-    if (inUnorderedList) {
-      htmlBlocks.push("</ul>");
-      inUnorderedList = false;
-    }
-    if (inOrderedList) {
-      htmlBlocks.push("</ol>");
-      inOrderedList = false;
-    }
-  }
-
-  lines.forEach((line) => {
-    const unorderedListMatch = line.match(/^\s*[-*]\s+(.+)/);
-    if (unorderedListMatch) {
-      if (!inUnorderedList) {
-        closeLists();
-        inUnorderedList = true;
-        htmlBlocks.push("<ul>");
-      }
-      htmlBlocks.push(`<li>${renderInlineMarkdown(unorderedListMatch[1])}</li>`);
-      return;
-    }
-
-    const orderedListMatch = line.match(/^\s*\d+\.\s+(.+)/);
-    if (orderedListMatch) {
-      if (!inOrderedList) {
-        closeLists();
-        inOrderedList = true;
-        htmlBlocks.push("<ol>");
-      }
-      htmlBlocks.push(`<li>${renderInlineMarkdown(orderedListMatch[1])}</li>`);
-      return;
-    }
-
-    closeLists();
-
-    if (!line.trim()) {
-      htmlBlocks.push("<br />");
-      return;
-    }
-
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)/);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      const tag = `h${level}`;
-      htmlBlocks.push(`<${tag}>${renderInlineMarkdown(headingMatch[2])}</${tag}>`);
-      return;
-    }
-
-    const quoteMatch = line.match(/^\>\s+(.+)/);
-    if (quoteMatch) {
-      htmlBlocks.push(`<blockquote>${renderInlineMarkdown(quoteMatch[1])}</blockquote>`);
-      return;
-    }
-
-    htmlBlocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
-  });
-
-  closeLists();
-  return htmlBlocks.join("");
-}
-
 function id() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -152,11 +66,6 @@ function readJson<T>(key: string, fallback: T): T {
 
 function writeJson<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
-}
-
-function autoResizeTextarea(element: HTMLTextAreaElement) {
-  element.style.height = "auto";
-  element.style.height = `${element.scrollHeight}px`;
 }
 
 function updateTask(taskId: string, updater: (task: LocalTask) => LocalTask) {
@@ -575,14 +484,11 @@ export default function ProductivityLayer({
               placeholder="Who gave this feedback?"
               className="w-full rounded-xl border border-mist-200 bg-mist-50 px-3 py-2 text-sm outline-none focus:border-accent-500"
             />
-            <textarea
+            <MarkdownEditor
               value={feedbackMessage}
-              onChange={(event) => {
-                setFeedbackMessage(event.target.value);
-                autoResizeTextarea(event.currentTarget);
-              }}
+              onChange={setFeedbackMessage}
               placeholder="What did they say?"
-              className="min-h-[90px] w-full resize-none overflow-hidden rounded-xl border border-mist-200 bg-mist-50 px-3 py-2 text-sm outline-none focus:border-accent-500"
+              minHeight={140}
             />
             <input
               type="datetime-local"
@@ -615,13 +521,10 @@ export default function ProductivityLayer({
                         onChange={(event) => setEditingFeedbackFrom(event.target.value)}
                         className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
                       />
-                      <textarea
+                      <MarkdownEditor
                         value={editingFeedbackMessage}
-                        onChange={(event) => {
-                          setEditingFeedbackMessage(event.target.value);
-                          autoResizeTextarea(event.currentTarget);
-                        }}
-                        className="min-h-[90px] w-full resize-none overflow-hidden rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                        onChange={setEditingFeedbackMessage}
+                        minHeight={140}
                       />
                       <input
                         type="datetime-local"
@@ -660,7 +563,7 @@ export default function ProductivityLayer({
                           <p className="text-sm font-semibold text-ink-900">{item.from}</p>
                           <div
                             className="prose prose-sm mt-1 max-w-none text-ink-500"
-                            dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(item.message) }}
+                            dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.message) }}
                           />
                           <p className="mt-1 text-xs text-ink-300">
                             {new Date(item.receivedAt).toLocaleString()}
@@ -726,11 +629,11 @@ export default function ProductivityLayer({
                 placeholder="Idea title"
                 className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
               />
-              <textarea
+              <MarkdownEditor
                 value={ideaNotes}
-                onChange={(event) => setIdeaNotes(event.target.value)}
+                onChange={setIdeaNotes}
                 placeholder="Optional notes"
-                className="min-h-[90px] w-full resize-none rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                minHeight={140}
               />
               <div className="flex gap-2">
                 <button
@@ -768,10 +671,10 @@ export default function ProductivityLayer({
                         onChange={(event) => setEditingIdeaTitle(event.target.value)}
                         className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
                       />
-                      <textarea
+                      <MarkdownEditor
                         value={editingIdeaNotes}
-                        onChange={(event) => setEditingIdeaNotes(event.target.value)}
-                        className="min-h-[90px] w-full resize-none rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500"
+                        onChange={setEditingIdeaNotes}
+                        minHeight={140}
                       />
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -805,7 +708,7 @@ export default function ProductivityLayer({
                           {item.notes ? (
                             <div
                               className="prose prose-sm mt-1 max-w-none text-ink-500"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(item.notes) }}
+                              dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.notes) }}
                             />
                           ) : null}
                           {item.sourceUrl ? (

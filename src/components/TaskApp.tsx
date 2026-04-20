@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import MarkdownEditor from "@/components/MarkdownEditor";
+import { extractMarkdownUrls, renderMarkdownToHtml } from "@/lib/markdown";
+
 type Task = {
   id: string;
   title: string;
@@ -27,176 +30,6 @@ function clampPreview(text: string, limit = 140) {
   return `${cleaned.slice(0, limit)}…`;
 }
 
-function escapeHtml(input: string) {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function renderInlineMarkdown(input: string) {
-  let output = escapeHtml(input);
-  output = output.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    '<a href="$2" target="_blank" rel="noreferrer">$1</a>'
-  );
-  output = output.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  output = output.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  output = output.replace(/`(.+?)`/g, "<code>$1</code>");
-  return output;
-}
-
-function renderMarkdownBlocks(input: string) {
-  const lines = input.split("\n");
-  const htmlBlocks: string[] = [];
-  let inUnorderedList = false;
-  let inOrderedList = false;
-
-  function closeLists() {
-    if (inUnorderedList) {
-      htmlBlocks.push("</ul>");
-      inUnorderedList = false;
-    }
-    if (inOrderedList) {
-      htmlBlocks.push("</ol>");
-      inOrderedList = false;
-    }
-  }
-
-  lines.forEach((line) => {
-    const unorderedListMatch = line.match(/^\s*[-*]\s+(.+)/);
-    if (unorderedListMatch) {
-      if (!inUnorderedList) {
-        closeLists();
-        inUnorderedList = true;
-        htmlBlocks.push("<ul>");
-      }
-      htmlBlocks.push(`<li>${renderInlineMarkdown(unorderedListMatch[1])}</li>`);
-      return;
-    }
-
-    const orderedListMatch = line.match(/^\s*\d+\.\s+(.+)/);
-    if (orderedListMatch) {
-      if (!inOrderedList) {
-        closeLists();
-        inOrderedList = true;
-        htmlBlocks.push("<ol>");
-      }
-      htmlBlocks.push(`<li>${renderInlineMarkdown(orderedListMatch[1])}</li>`);
-      return;
-    }
-
-    closeLists();
-
-    if (!line.trim()) {
-      htmlBlocks.push("<br />");
-      return;
-    }
-
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)/);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      const tag = `h${level}`;
-      htmlBlocks.push(`<${tag}>${renderInlineMarkdown(headingMatch[2])}</${tag}>`);
-      return;
-    }
-
-    const quoteMatch = line.match(/^\>\s+(.+)/);
-    if (quoteMatch) {
-      htmlBlocks.push(`<blockquote>${renderInlineMarkdown(quoteMatch[1])}</blockquote>`);
-      return;
-    }
-
-    htmlBlocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
-  });
-
-  closeLists();
-  return htmlBlocks.join("");
-}
-
-function extractUrls(input: string) {
-  const matches = input.match(/https?:\/\/[^\s<]+/g) || [];
-  return Array.from(new Set(matches));
-}
-
-function wrapMarkdownSelection(
-  ref: React.RefObject<HTMLTextAreaElement>,
-  value: string,
-  setValue: (next: string) => void,
-  left: string,
-  right: string,
-  placeholder: string
-) {
-  const element = ref.current;
-  const start = element?.selectionStart ?? value.length;
-  const end = element?.selectionEnd ?? value.length;
-  const selected = value.slice(start, end);
-  const content = selected || placeholder;
-  const next = `${value.slice(0, start)}${left}${content}${right}${value.slice(end)}`;
-  setValue(next);
-  requestAnimationFrame(() => {
-    const target = ref.current;
-    if (!target) return;
-    target.focus();
-    target.setSelectionRange(start + left.length, start + left.length + content.length);
-  });
-}
-
-function prefixMarkdownSelection(
-  ref: React.RefObject<HTMLTextAreaElement>,
-  value: string,
-  setValue: (next: string) => void,
-  prefix: string,
-  placeholder: string
-) {
-  const element = ref.current;
-  const start = element?.selectionStart ?? value.length;
-  const end = element?.selectionEnd ?? value.length;
-  const selected = value.slice(start, end);
-  const content = selected || placeholder;
-  const prefixed = content
-    .split("\n")
-    .map((line) => `${prefix}${line}`)
-    .join("\n");
-  const next = `${value.slice(0, start)}${prefixed}${value.slice(end)}`;
-  setValue(next);
-  requestAnimationFrame(() => {
-    const target = ref.current;
-    if (!target) return;
-    target.focus();
-    target.setSelectionRange(start, start + prefixed.length);
-  });
-}
-
-function linkMarkdownSelection(
-  ref: React.RefObject<HTMLTextAreaElement>,
-  value: string,
-  setValue: (next: string) => void
-) {
-  const element = ref.current;
-  const start = element?.selectionStart ?? value.length;
-  const end = element?.selectionEnd ?? value.length;
-  const selected = value.slice(start, end).trim() || "link text";
-  const rawUrl = window.prompt("Enter URL for selected text", "https://");
-  if (!rawUrl) return;
-  const trimmed = rawUrl.trim();
-  if (!trimmed) return;
-  const normalized = /^(https?:\/\/|mailto:)/i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`;
-  const markdownLink = `[${selected}](${normalized})`;
-  const next = `${value.slice(0, start)}${markdownLink}${value.slice(end)}`;
-  setValue(next);
-  requestAnimationFrame(() => {
-    const target = ref.current;
-    if (!target) return;
-    target.focus();
-    target.setSelectionRange(start, start + markdownLink.length);
-  });
-}
-
 export default function TaskApp() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -206,12 +39,8 @@ export default function TaskApp() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editNotes, setEditNotes] = useState("");
-  const [notesMode, setNotesMode] = useState<"write" | "preview">("write");
-  const [editNotesMode, setEditNotesMode] = useState<"write" | "preview">("write");
   const [dueAt, setDueAt] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
-  const notesRef = useRef<HTMLTextAreaElement>(null);
-  const editNotesRef = useRef<HTMLTextAreaElement>(null);
   const ignoreNextStorageSyncRef = useRef(false);
 
   useEffect(() => {
@@ -325,7 +154,6 @@ export default function TaskApp() {
     setEditingId(null);
     setEditTitle("");
     setEditNotes("");
-    setEditNotesMode("write");
     setEditDueAt("");
   }
 
@@ -439,116 +267,12 @@ export default function TaskApp() {
               <label className="text-sm font-semibold text-ink-700">
                 Notes (optional)
               </label>
-              <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  wrapMarkdownSelection(notesRef, notes, setNotes, "**", "**", "bold")
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Bold
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  wrapMarkdownSelection(notesRef, notes, setNotes, "*", "*", "italic")
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Italic
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  wrapMarkdownSelection(notesRef, notes, setNotes, "`", "`", "code")
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Code
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  prefixMarkdownSelection(notesRef, notes, setNotes, "- ", "list item")
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                List
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  prefixMarkdownSelection(notesRef, notes, setNotes, "## ", "Heading")
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                H2
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  prefixMarkdownSelection(notesRef, notes, setNotes, "> ", "Quoted text")
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Quote
-              </button>
-              <button
-                type="button"
-                onClick={() => linkMarkdownSelection(notesRef, notes, setNotes)}
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Link
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setNotes((prev) =>
-                    prev ? `${prev}\nhttps://docs.google.com/document/...` : "https://docs.google.com/document/..."
-                  )
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Google Doc
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setNotes((prev) =>
-                    prev ? `${prev}\nhttps://docs.google.com/spreadsheets/...` : "https://docs.google.com/spreadsheets/..."
-                  )
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                Google Sheet
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setNotesMode((prev) => (prev === "write" ? "preview" : "write"))
-                }
-                className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-              >
-                {notesMode === "write" ? "Preview" : "Write"}
-              </button>
-            </div>
-              {notesMode === "write" ? (
-                <textarea
-                  ref={notesRef}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Markdown supported. Add links, Google Docs, or Sheets URLs."
-                  className="min-h-[140px] resize-none rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-                />
-              ) : (
-                <div className="min-h-[140px] rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
-                  <div
-                    className="prose prose-sm max-w-none text-ink-700"
-                    dangerouslySetInnerHTML={{ __html: renderMarkdownBlocks(notes) }}
-                  />
-                </div>
-              )}
+              <MarkdownEditor
+                value={notes}
+                onChange={setNotes}
+                placeholder="Markdown supported. Supports headings, task lists, tables, YAML front matter, and autolinks."
+                minHeight={160}
+              />
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-ink-700">
@@ -712,168 +436,12 @@ export default function TaskApp() {
                                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
                                   Notes
                                 </label>
-                                <div className="flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      wrapMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes,
-                                        "**",
-                                        "**",
-                                        "bold"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Bold
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      wrapMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes,
-                                        "*",
-                                        "*",
-                                        "italic"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Italic
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      wrapMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes,
-                                        "`",
-                                        "`",
-                                        "code"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Code
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      prefixMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes,
-                                        "- ",
-                                        "list item"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    List
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      prefixMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes,
-                                        "## ",
-                                        "Heading"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    H2
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      prefixMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes,
-                                        "> ",
-                                        "Quoted text"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Quote
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      linkMarkdownSelection(
-                                        editNotesRef,
-                                        editNotes,
-                                        setEditNotes
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Link
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setEditNotes((prev) =>
-                                        prev
-                                          ? `${prev}\nhttps://docs.google.com/document/...`
-                                          : "https://docs.google.com/document/..."
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Google Doc
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setEditNotes((prev) =>
-                                        prev
-                                          ? `${prev}\nhttps://docs.google.com/spreadsheets/...`
-                                          : "https://docs.google.com/spreadsheets/..."
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    Google Sheet
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setEditNotesMode((prev) =>
-                                        prev === "write" ? "preview" : "write"
-                                      )
-                                    }
-                                    className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                                  >
-                                    {editNotesMode === "write" ? "Preview" : "Write"}
-                                  </button>
-                                </div>
-                                {editNotesMode === "write" ? (
-                                  <textarea
-                                    ref={editNotesRef}
-                                    value={editNotes}
-                                    onChange={(event) => setEditNotes(event.target.value)}
-                                    className="min-h-[120px] resize-none rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
-                                  />
-                                ) : (
-                                  <div className="min-h-[120px] rounded-2xl border border-mist-200 bg-white px-4 py-2">
-                                    <div
-                                      className="prose prose-sm max-w-none text-ink-700"
-                                      dangerouslySetInnerHTML={{
-                                        __html: renderMarkdownBlocks(editNotes)
-                                      }}
-                                    />
-                                  </div>
-                                )}
+                                <MarkdownEditor
+                                  value={editNotes}
+                                  onChange={setEditNotes}
+                                  placeholder="Markdown supported. Supports headings, task lists, tables, YAML front matter, and autolinks."
+                                  minHeight={140}
+                                />
                               </div>
                               <div className="flex flex-col gap-2">
                                 <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
@@ -912,12 +480,12 @@ export default function TaskApp() {
                     <div
                       className="prose prose-sm max-w-none text-ink-700"
                       dangerouslySetInnerHTML={{
-                        __html: renderMarkdownBlocks(task.notes)
+                        __html: renderMarkdownToHtml(task.notes)
                       }}
                     />
-                    {extractUrls(task.notes).length > 0 ? (
+                    {extractMarkdownUrls(task.notes).length > 0 ? (
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {extractUrls(task.notes).map((url) => (
+                        {extractMarkdownUrls(task.notes).map((url) => (
                           <a
                             key={url}
                             href={url}
