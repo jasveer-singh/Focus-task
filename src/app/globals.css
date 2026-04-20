@@ -130,6 +130,98 @@ body {
   padding: 0;
 }
 
+.markdown-rendered .code-block {
+  position: relative;
+  margin: 1rem 0;
+}
+
+.markdown-rendered .code-copy-button {
+  position: absolute;
+  right: 0.75rem;
+  top: 0.75rem;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  border: 1px solid #dbe4f6;
+  background: rgba(255, 255, 255, 0.95);
+  color: #475569;
+  border-radius: 9999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.markdown-rendered .code-block:hover .code-copy-button {
+  opacity: 1;
+}
+
+.markdown-rendered .code-block pre {
+  margin: 0;
+  padding-top: 2.3rem;
+}
+
+.markdown-rendered .code-block code {
+  display: block;
+  counter-reset: line;
+  line-height: 1.6;
+}
+
+.markdown-rendered .code-block .line {
+  display: block;
+}
+
+.markdown-rendered .code-block .line::before {
+  counter-increment: line;
+  content: counter(line);
+  user-select: none;
+  color: #94a3b8;
+  padding-right: 16px;
+  min-width: 2ch;
+  display: inline-block;
+}
+
+.markdown-rendered .hljs-keyword,
+.markdown-rendered .hljs-selector-tag,
+.markdown-rendered .hljs-literal,
+.markdown-rendered .hljs-section,
+.markdown-rendered .hljs-link {
+  color: #7c3aed;
+}
+
+.markdown-rendered .hljs-string,
+.markdown-rendered .hljs-title,
+.markdown-rendered .hljs-name,
+.markdown-rendered .hljs-type,
+.markdown-rendered .hljs-attribute,
+.markdown-rendered .hljs-symbol,
+.markdown-rendered .hljs-bullet,
+.markdown-rendered .hljs-addition,
+.markdown-rendered .hljs-template-tag,
+.markdown-rendered .hljs-template-variable {
+  color: #0f766e;
+}
+
+.markdown-rendered .hljs-comment,
+.markdown-rendered .hljs-quote,
+.markdown-rendered .hljs-deletion,
+.markdown-rendered .hljs-meta {
+  color: #94a3b8;
+}
+
+.markdown-rendered .hljs-number,
+.markdown-rendered .hljs-regexp,
+.markdown-rendered .hljs-variable,
+.markdown-rendered .hljs-selector-class,
+.markdown-rendered .hljs-selector-attr {
+  color: #2563eb;
+}
+
+.markdown-rendered .hljs-built_in,
+.markdown-rendered .hljs-doctag,
+.markdown-rendered .hljs-title.class_,
+.markdown-rendered .hljs-function {
+  color: #be123c;
+}
+
 .markdown-rendered ul,
 .markdown-rendered ol {
   margin: 0.6rem 0 0.6rem 1.25rem;

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
-import { extractMarkdownUrls, renderMarkdownToHtml } from "@/lib/markdown";
+import RenderedMarkdown from "@/components/RenderedMarkdown";
+import { extractMarkdownUrls } from "@/lib/markdown";
 
 type Task = {
   id: string;
@@ -477,12 +478,7 @@ export default function TaskApp() {
                         ) : null}
                 {task.notes && isOpen ? (
                   <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
-                    <div
-                      className="markdown-rendered"
-                      dangerouslySetInnerHTML={{
-                        __html: renderMarkdownToHtml(task.notes)
-                      }}
-                    />
+                    <RenderedMarkdown source={task.notes} />
                     {extractMarkdownUrls(task.notes).length > 0 ? (
                       <div className="mt-4 flex flex-wrap gap-2">
                         {extractMarkdownUrls(task.notes).map((url) => (

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
-import { renderMarkdownToHtml } from "@/lib/markdown";
+import RenderedMarkdown from "@/components/RenderedMarkdown";
 
 type LocalTask = {
   id: string;
@@ -561,10 +561,7 @@ export default function ProductivityLayer({
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-ink-900">{item.from}</p>
-                          <div
-                            className="markdown-rendered mt-1"
-                            dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.message) }}
-                          />
+                          <RenderedMarkdown source={item.message} className="markdown-rendered mt-1" />
                           <p className="mt-1 text-xs text-ink-300">
                             {new Date(item.receivedAt).toLocaleString()}
                           </p>
@@ -706,10 +703,7 @@ export default function ProductivityLayer({
                         <div>
                           <p className="text-sm font-semibold text-ink-900">{item.title}</p>
                           {item.notes ? (
-                            <div
-                              className="markdown-rendered mt-1"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(item.notes) }}
-                            />
+                            <RenderedMarkdown source={item.notes} className="markdown-rendered mt-1" />
                           ) : null}
                           {item.sourceUrl ? (
                             <a

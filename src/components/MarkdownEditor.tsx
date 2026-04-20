@@ -218,6 +218,27 @@ export default function MarkdownEditor({
     prependPrefix("- [ ] ", "Task");
   }
 
+  function insertTable() {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart ?? value.length;
+    const table = [
+      "",
+      "| Column A | Column B | Column C |",
+      "| -------- | -------- | -------- |",
+      "| Cell 1   | Cell 2   | Cell 3   |"
+    ].join("\n");
+    updateValue(`${value.slice(0, start)}${table}${value.slice(start)}`);
+  }
+
+  function insertCodeBlock() {
+    const element = textareaRef.current;
+    if (!element) return;
+    const start = element.selectionStart ?? value.length;
+    const snippet = "\n```javascript\nconst greet = (name) => `Hello, ${name}!`;\nconsole.log(greet('World'));\n```\n";
+    updateValue(`${value.slice(0, start)}${snippet}${value.slice(start)}`);
+  }
+
   function insertLink() {
     const element = textareaRef.current;
     if (!element) return;
@@ -357,6 +378,20 @@ export default function MarkdownEditor({
             className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
           >
             Task
+          </button>
+          <button
+            type="button"
+            onClick={insertTable}
+            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+          >
+            Table
+          </button>
+          <button
+            type="button"
+            onClick={insertCodeBlock}
+            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
+          >
+            Code block
           </button>
           <button
             type="button"
