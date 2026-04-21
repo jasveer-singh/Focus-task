@@ -380,6 +380,34 @@ body {
 .markdown-rendered .task-list-item input[type="checkbox"] {
   margin-top: 0.28rem;
   accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.markdown-rendered .markdown-frontmatter {
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg-secondary);
+  padding: 0.75rem 1rem;
+}
+
+.markdown-rendered .markdown-frontmatter pre {
+  margin: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-family: var(--editor-code-font);
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.markdown-rendered .markdown-frontmatter code {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
 }
 
 .markdown-rendered blockquote {

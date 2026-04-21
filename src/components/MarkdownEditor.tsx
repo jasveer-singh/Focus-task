@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   EMOJI_ALIASES,
@@ -9,6 +9,21 @@ import {
   parseMarkdownAst,
   renderMarkdownToHtml
 } from "@/lib/markdown";
+
+function useDebouncedHtml(value: string, enableScripts: boolean) {
+  const [html, setHtml] = useState(() => renderMarkdownToHtml(value, { enableScripts }));
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (typeof requestIdleCallback !== "undefined") {
+        requestIdleCallback(() => setHtml(renderMarkdownToHtml(value, { enableScripts })));
+      } else {
+        setHtml(renderMarkdownToHtml(value, { enableScripts }));
+      }
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [value, enableScripts]);
+  return html;
+}
 
 function applyToSelectedLines(
   value: string,
@@ -103,19 +118,16 @@ export default function MarkdownEditor({
     autoResize(textareaRef.current);
   }, [value, minHeight]);
 
-  const html = useMemo(
-    () => renderMarkdownToHtml(value, { enableScripts }),
-    [enableScripts, value]
-  );
+  const html = useDebouncedHtml(value, enableScripts);
 
-  const emojiSuggestions = useMemo(() => {
+  const emojiSuggestions = (() => {
     if (!emojiQuery) return Object.entries(EMOJI_ALIASES).slice(0, 6);
     return Object.entries(EMOJI_ALIASES)
       .filter(([alias]) => alias.startsWith(emojiQuery.toLowerCase()))
       .slice(0, 6);
-  }, [emojiQuery]);
+  })();
 
-  const stats = useMemo(() => getTextStats(value), [value]);
+  const stats = getTextStats(value);
 
   function updateValue(nextValue: string) {
     onChange(nextValue);
@@ -270,6 +282,26 @@ export default function MarkdownEditor({
     });
   }
 
+  function onLivePreviewClick(event: React.MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    if (target.tagName !== "INPUT" || target.getAttribute("data-task-checkbox") !== "true") return;
+    const allCheckboxes = Array.from(
+      event.currentTarget.querySelectorAll<HTMLInputElement>('[data-task-checkbox="true"]')
+    );
+    const index = allCheckboxes.indexOf(target as HTMLInputElement);
+    if (index === -1) return;
+    let count = 0;
+    const newSource = value.replace(/^(\s*[-*+]\s+)\[([ xX])\]/gm, (match, prefix, check) => {
+      if (count === index) {
+        count++;
+        return `${prefix}[${check.trim() ? " " : "x"}]`;
+      }
+      count++;
+      return match;
+    });
+    if (newSource !== value) updateValue(newSource);
+  }
+
   function insertEmoji(emoji: string) {
     if (!emojiRange) return;
     const nextValue = `${value.slice(0, emojiRange.start)}${emoji}${value.slice(emojiRange.end)}`;
@@ -335,15 +367,59 @@ export default function MarkdownEditor({
       "{": "}",
       '"': '"',
       "'": "'",
-      "`": "`"
+      "`": "`",
+      "*": "*",
+      "_": "_"
     };
+
+    // Backspace: delete both chars of an empty pair
+    if (event.key === "Backspace") {
+      const element = textareaRef.current;
+      if (element) {
+        const start = element.selectionStart ?? value.length;
+        const end = element.selectionEnd ?? value.length;
+        if (start === end && start > 0) {
+          const prev = value[start - 1];
+          const next = value[start];
+          const closingOf: Record<string, string> = {
+            "(": ")", "[": "]", "{": "}", '"': '"', "'": "'", "`": "`", "*": "*", "_": "_"
+          };
+          if (closingOf[prev] === next) {
+            event.preventDefault();
+            const nextValue = value.slice(0, start - 1) + value.slice(start + 1);
+            updateValue(nextValue);
+            requestAnimationFrame(() => {
+              const t = textareaRef.current;
+              if (!t) return;
+              t.setSelectionRange(start - 1, start - 1);
+              updateActiveLine();
+            });
+            return;
+          }
+        }
+      }
+    }
+
     const close = pairs[event.key];
     if (close) {
       const element = textareaRef.current;
       if (!element) return;
-      event.preventDefault();
       const start = element.selectionStart ?? value.length;
       const end = element.selectionEnd ?? value.length;
+
+      // Skip-over: if no selection and next char is already the closing char, move cursor past it
+      if (start === end && value[start] === close && event.key === close) {
+        event.preventDefault();
+        requestAnimationFrame(() => {
+          const t = textareaRef.current;
+          if (!t) return;
+          t.focus();
+          t.setSelectionRange(start + 1, start + 1);
+        });
+        return;
+      }
+
+      event.preventDefault();
       const selected = value.slice(start, end);
       const next = `${value.slice(0, start)}${event.key}${selected}${close}${value.slice(end)}`;
       updateValue(next);
@@ -558,6 +634,7 @@ export default function MarkdownEditor({
             <div
               className="markdown-rendered"
               dangerouslySetInnerHTML={{ __html: html }}
+              onClick={onLivePreviewClick}
             />
           ) : (
             <p className="text-sm text-ink-300">{placeholder}</p>

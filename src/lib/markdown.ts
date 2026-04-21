@@ -87,6 +87,12 @@ type HeadingMeta = {
   id: string;
 };
 
+function extractFrontmatter(source: string): { yaml: string | null; body: string } {
+  const match = source.match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/);
+  if (!match) return { yaml: null, body: source };
+  return { yaml: match[1], body: source.slice(match[0].length) };
+}
+
 function protectCodeSegments(source: string) {
   const segments: string[] = [];
   const protectedSource = source.replace(/```[\s\S]*?```|``[^`]*``|`[^`]*`/g, (match) => {
@@ -167,8 +173,15 @@ export function renderMarkdownToHtml(
   source: string,
   options: MarkdownRenderOptions = {}
 ) {
-  const prepared = replaceTocMarker(applyInlineExtensions(source, options));
-  return addHeadingIdsAndToc(String(renderProcessor.processSync(prepared)));
+  const { yaml, body } = extractFrontmatter(source);
+  const prepared = replaceTocMarker(applyInlineExtensions(body, options));
+  let html = addHeadingIdsAndToc(String(renderProcessor.processSync(prepared)));
+  // Make task checkboxes interactive (sanitizer keeps them but adds disabled)
+  html = html.replace(/<input type="checkbox" disabled/g, '<input type="checkbox" data-task-checkbox="true"');
+  if (yaml !== null) {
+    html = `<div class="markdown-frontmatter"><pre><code>${escapeHtml(yaml)}</code></pre></div>${html}`;
+  }
+  return html;
 }
 
 export function renderMarkdownDocument(
