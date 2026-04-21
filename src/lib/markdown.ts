@@ -1,21 +1,36 @@
 import { unified } from "unified";
+import GithubSlugger from "github-slugger";
 import hljs from "highlight.js";
+import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
+import "katex/contrib/mhchem";
 
 const parseProcessor = unified()
   .use(remarkParse)
   .use(remarkFrontmatter, ["yaml"])
-  .use(remarkGfm);
+  .use(remarkGfm)
+  .use(remarkMath);
 
 const renderProcessor = unified()
   .use(remarkParse)
   .use(remarkFrontmatter, ["yaml"])
   .use(remarkGfm)
+  .use(remarkMath)
   .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeRaw)
+  .use(rehypeSanitize)
+  .use(rehypeKatex, {
+    throwOnError: false,
+    trust: false,
+    strict: false
+  })
   .use(rehypeStringify, { allowDangerousHtml: true });
 
 export type MarkdownRenderMode = "source" | "live";
@@ -62,6 +77,16 @@ function escapeAttribute(input: string) {
   return encodeURIComponent(input);
 }
 
+function stripTags(input: string) {
+  return decodeHtml(input.replace(/<[^>]+>/g, "")).trim();
+}
+
+type HeadingMeta = {
+  depth: number;
+  text: string;
+  id: string;
+};
+
 function protectCodeSegments(source: string) {
   const segments: string[] = [];
   const protectedSource = source.replace(/```[\s\S]*?```|``[^`]*``|`[^`]*`/g, (match) => {
@@ -92,6 +117,48 @@ function applyInlineExtensions(source: string, options: MarkdownRenderOptions = 
   return restoreCodeSegments(transformed, segments);
 }
 
+function replaceTocMarker(source: string) {
+  return source.replace(/^\[TOC\]\s*$/gim, "FOCUSTOCPLACEHOLDER");
+}
+
+function buildTableOfContents(headings: HeadingMeta[]) {
+  if (headings.length === 0) return "";
+  const items = headings
+    .filter((heading) => heading.depth >= 1 && heading.depth <= 3)
+    .map((heading) => {
+      const indentClass =
+        heading.depth === 1
+          ? ""
+          : heading.depth === 2
+            ? " class=\"toc-depth-2\""
+            : " class=\"toc-depth-3\"";
+      return `<li${indentClass}><a href="#${heading.id}">${escapeHtml(heading.text)}</a></li>`;
+    })
+    .join("");
+  return `<nav class="markdown-toc" aria-label="Table of contents"><ul>${items}</ul></nav>`;
+}
+
+function addHeadingIdsAndToc(html: string) {
+  const slugger = new GithubSlugger();
+  const headings: HeadingMeta[] = [];
+
+  const htmlWithIds = html.replace(
+    /<h([1-6])([^>]*)>([\s\S]*?)<\/h\1>/g,
+    (match, depthValue, attrs = "", content = "") => {
+      if (/\sid=/.test(attrs)) return match;
+      const text = stripTags(content);
+      const id = slugger.slug(text || `heading-${headings.length + 1}`);
+      headings.push({ depth: Number(depthValue), text, id });
+      return `<h${depthValue}${attrs} id="${id}">${content}</h${depthValue}>`;
+    }
+  );
+
+  return htmlWithIds.replace(
+    /<p>FOCUSTOCPLACEHOLDER<\/p>|FOCUSTOCPLACEHOLDER/g,
+    buildTableOfContents(headings)
+  );
+}
+
 export function parseMarkdownAst(source: string) {
   return parseProcessor.parse(source);
 }
@@ -100,7 +167,8 @@ export function renderMarkdownToHtml(
   source: string,
   options: MarkdownRenderOptions = {}
 ) {
-  return String(renderProcessor.processSync(applyInlineExtensions(source, options)));
+  const prepared = replaceTocMarker(applyInlineExtensions(source, options));
+  return addHeadingIdsAndToc(String(renderProcessor.processSync(prepared)));
 }
 
 export function renderMarkdownDocument(
@@ -115,6 +183,14 @@ export function renderMarkdownDocument(
       const rawCode = decodeHtml(escapedCode);
       const languageMatch = className.match(/language-([a-z0-9_-]+)/i);
       const language = languageMatch?.[1]?.toLowerCase();
+
+      if (language === "mermaid") {
+        return [
+          `<div class="mermaid-block" data-mermaid-source="${escapeAttribute(rawCode)}">`,
+          `<div class="mermaid">${escapeHtml(rawCode)}</div>`,
+          "</div>"
+        ].join("");
+      }
 
       let highlighted = "";
       if (language && hljs.getLanguage(language)) {

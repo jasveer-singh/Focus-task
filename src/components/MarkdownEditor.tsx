@@ -42,6 +42,15 @@ function getActiveLine(value: string, cursorPosition: number) {
   return value.slice(0, cursorPosition).split("\n").length;
 }
 
+function getTextStats(value: string) {
+  const words = value.trim().split(/\s+/).filter(Boolean).length;
+  const chars = value.length;
+  const charsNoSpaces = value.replace(/\s/g, "").length;
+  const lines = value.split("\n").length;
+  const readTime = Math.max(1, Math.ceil(words / 200));
+  return { words, chars, charsNoSpaces, lines, readTime };
+}
+
 function wrapSelection(
   value: string,
   selectionStart: number,
@@ -105,6 +114,8 @@ export default function MarkdownEditor({
       .filter(([alias]) => alias.startsWith(emojiQuery.toLowerCase()))
       .slice(0, 6);
   }, [emojiQuery]);
+
+  const stats = useMemo(() => getTextStats(value), [value]);
 
   function updateValue(nextValue: string) {
     onChange(nextValue);
@@ -278,6 +289,12 @@ export default function MarkdownEditor({
   function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     const modifier = event.ctrlKey || event.metaKey;
     if (modifier) {
+      if (event.key === "/") {
+        event.preventDefault();
+        setRenderMode(editorState.renderMode === "source" ? "live" : "source");
+        return;
+      }
+
       if (/^[0-6]$/.test(event.key)) {
         event.preventDefault();
         if (event.key === "0") {
@@ -309,6 +326,38 @@ export default function MarkdownEditor({
     if (event.key === "Enter" && emojiRange && emojiSuggestions.length > 0) {
       event.preventDefault();
       insertEmoji(emojiSuggestions[0][1]);
+      return;
+    }
+
+    const pairs: Record<string, string> = {
+      "(": ")",
+      "[": "]",
+      "{": "}",
+      '"': '"',
+      "'": "'",
+      "`": "`"
+    };
+    const close = pairs[event.key];
+    if (close) {
+      const element = textareaRef.current;
+      if (!element) return;
+      event.preventDefault();
+      const start = element.selectionStart ?? value.length;
+      const end = element.selectionEnd ?? value.length;
+      const selected = value.slice(start, end);
+      const next = `${value.slice(0, start)}${event.key}${selected}${close}${value.slice(end)}`;
+      updateValue(next);
+      requestAnimationFrame(() => {
+        const target = textareaRef.current;
+        if (!target) return;
+        target.focus();
+        if (selected) {
+          target.setSelectionRange(start + 1, start + 1 + selected.length);
+        } else {
+          target.setSelectionRange(start + 1, start + 1);
+        }
+        updateActiveLine();
+      });
     }
   }
 
@@ -440,6 +489,9 @@ export default function MarkdownEditor({
         <div className="flex items-center gap-2">
           <span className="text-[11px] uppercase tracking-[0.2em] text-ink-300">
             Line {editorState.activeLine}
+          </span>
+          <span className="text-[11px] uppercase tracking-[0.2em] text-ink-300">
+            {stats.words} words · {stats.chars} chars · {stats.lines} lines · {stats.readTime} min
           </span>
           <button
             type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { renderMarkdownDocument } from "@/lib/markdown";
 
@@ -12,6 +12,41 @@ export default function RenderedMarkdown({
   className?: string;
 }) {
   const html = useMemo(() => renderMarkdownDocument(source), [source]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function renderMermaid() {
+      if (!html.includes("mermaid-block")) return;
+      const mermaid = (await import("mermaid")).default;
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: "default"
+      });
+
+      const blocks = Array.from(document.querySelectorAll<HTMLElement>(".mermaid-block"));
+      for (const block of blocks) {
+        if (cancelled || block.dataset.rendered === "true") continue;
+        const encoded = block.getAttribute("data-mermaid-source");
+        if (!encoded) continue;
+        const sourceText = decodeURIComponent(encoded);
+        const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+        try {
+          const result = await mermaid.render(id, sourceText);
+          block.innerHTML = result.svg;
+          block.dataset.rendered = "true";
+        } catch {
+          block.innerHTML = `<pre class="mermaid-error">${sourceText}</pre>`;
+        }
+      }
+    }
+
+    renderMermaid();
+    return () => {
+      cancelled = true;
+    };
+  }, [html]);
 
   async function onClick(event: React.MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement | null;
