@@ -97,6 +97,9 @@ export default function MarkdownEditor({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [enableScripts, setEnableScripts] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
+  const helpRef = useRef<HTMLDivElement | null>(null);
+  const helpButtonRef = useRef<HTMLButtonElement | null>(null);
   const [emojiQuery, setEmojiQuery] = useState("");
   const [emojiRange, setEmojiRange] = useState<{ start: number; end: number } | null>(null);
   const [editorState, setEditorState] = useState<MarkdownEditorState>({
@@ -117,6 +120,25 @@ export default function MarkdownEditor({
   useEffect(() => {
     autoResize(textareaRef.current);
   }, [value, minHeight]);
+
+  useEffect(() => {
+    if (!showHelp) return;
+    function onPointerDown(e: PointerEvent) {
+      const t = e.target as Node;
+      const insidePopup = helpRef.current?.contains(t);
+      const insideButton = helpButtonRef.current?.contains(t);
+      if (!insidePopup && !insideButton) setShowHelp(false);
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowHelp(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keyup", onKeyUp);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keyup", onKeyUp);
+    };
+  }, [showHelp]);
 
   const html = useDebouncedHtml(value, enableScripts);
 
@@ -441,169 +463,133 @@ export default function MarkdownEditor({
     setEditorState((current) => ({ ...current, renderMode }));
   }
 
+  const insertActions: Array<[string, () => void]> = [
+    ["List", () => prependPrefix("- ", "List item")],
+    ["Task", insertTaskItem],
+    ["Table", insertTable],
+    ["Code block", insertCodeBlock],
+    ["Quote", () => prependPrefix("> ", "Quote")],
+    ["Rule", insertRule],
+    ["Link", insertLink],
+    ["~~Strike~~", () => applyWrappedText("~~", "~~", "text")],
+    ["==Highlight==", () => applyWrappedText("==", "==", "text")],
+    ...(enableScripts
+      ? ([["Sub ~x~", () => applyWrappedText("~", "~", "2")], ["Sup ^x^", () => applyWrappedText("^", "^", "2")]] as Array<[string, () => void]>)
+      : [])
+  ];
+
   return (
-    <div className="rounded-2xl border border-mist-200 bg-mist-50">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-mist-200 px-3 py-2">
-        <div className="flex flex-wrap gap-2">
-          {[1, 2, 3, 4, 5, 6].map((level) => (
-            <button
-              key={level}
-              type="button"
-              onClick={() => applyHeading(level)}
-              className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-            >
-              H{level}
-            </button>
-          ))}
+    <div className="relative rounded-2xl border border-mist-200 bg-mist-50">
+      {/* Minimal header */}
+      <div className="flex items-center justify-between border-b border-mist-200 px-3 py-2">
+        <span className="text-[11px] text-ink-300">
+          {stats.words} words · {stats.lines} lines · {stats.readTime} min
+        </span>
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={clearHeading}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            P
-          </button>
-          <button
-            type="button"
-            onClick={() => applyWrappedText("**", "**", "Bold text")}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Bold
-          </button>
-          <button
-            type="button"
-            onClick={() => applyWrappedText("*", "*", "Italic text")}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Italic
-          </button>
-          <button
-            type="button"
-            onClick={() => applyWrappedText("~~", "~~", "Struck through text")}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Strike
-          </button>
-          <button
-            type="button"
-            onClick={() => applyWrappedText("==", "==", "Highlighted text")}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Highlight
-          </button>
-          <button
-            type="button"
-            onClick={() => prependPrefix("- ", "List item")}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            List
-          </button>
-          <button
-            type="button"
-            onClick={insertTaskItem}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Task
-          </button>
-          <button
-            type="button"
-            onClick={insertTable}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Table
-          </button>
-          <button
-            type="button"
-            onClick={insertCodeBlock}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Code block
-          </button>
-          <button
-            type="button"
-            onClick={() => prependPrefix("> ", "Quote")}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Quote
-          </button>
-          <button
-            type="button"
-            onClick={insertRule}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Rule
-          </button>
-          <button
-            type="button"
-            onClick={insertLink}
-            className="rounded-full border border-mist-200 bg-white px-2 py-1 text-[11px] font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500"
-          >
-            Link
-          </button>
-          <button
-            type="button"
-            onClick={() => applyWrappedText("~", "~", "2")}
-            className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${
-              enableScripts
-                ? "border-accent-500 bg-accent-500 text-white"
-                : "border-mist-200 bg-white text-ink-500 hover:border-accent-500 hover:text-accent-500"
+            onClick={() => setEnableScripts((c) => !c)}
+            title="Toggle subscript / superscript"
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              enableScripts ? "text-accent-500" : "text-ink-300 hover:text-ink-500"
             }`}
           >
-            Sub
+            x²
           </button>
           <button
+            ref={helpButtonRef}
             type="button"
-            onClick={() => applyWrappedText("^", "^", "2")}
-            className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${
-              enableScripts
-                ? "border-accent-500 bg-accent-500 text-white"
-                : "border-mist-200 bg-white text-ink-500 hover:border-accent-500 hover:text-accent-500"
+            onClick={() => setShowHelp((h) => !h)}
+            title="Markdown reference"
+            className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+              showHelp
+                ? "border-accent-400 bg-accent-50 text-accent-600"
+                : "border-mist-200 bg-white text-ink-400 hover:border-accent-300 hover:text-accent-500"
             }`}
           >
-            Sup
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-[0.2em] text-ink-300">
-            Line {editorState.activeLine}
-          </span>
-          <span className="text-[11px] uppercase tracking-[0.2em] text-ink-300">
-            {stats.words} words · {stats.chars} chars · {stats.lines} lines · {stats.readTime} min
-          </span>
-          <button
-            type="button"
-            onClick={() => setEnableScripts((current) => !current)}
-            className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-              enableScripts
-                ? "bg-accent-500 text-white"
-                : "border border-mist-200 bg-white text-ink-500"
-            }`}
-          >
-            Scripts
+            ?
           </button>
           <button
             type="button"
-            onClick={() => setRenderMode("source")}
-            className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-              editorState.renderMode === "source"
-                ? "bg-accent-500 text-white"
-                : "border border-mist-200 bg-white text-ink-500"
-            }`}
-          >
-            Source
-          </button>
-          <button
-            type="button"
-            onClick={() => setRenderMode("live")}
-            className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+            onClick={() => setRenderMode(editorState.renderMode === "source" ? "live" : "source")}
+            title="Toggle source / preview (Ctrl+/)"
+            className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
               editorState.renderMode === "live"
-                ? "bg-accent-500 text-white"
-                : "border border-mist-200 bg-white text-ink-500"
+                ? "border-accent-400 bg-accent-500 text-white"
+                : "border-mist-200 bg-white text-ink-400 hover:border-accent-300 hover:text-accent-500"
             }`}
           >
-            Live
+            {editorState.renderMode === "source" ? "Preview" : "Source"}
           </button>
         </div>
       </div>
+
+      {/* Help popup */}
+      {showHelp && (
+        <div
+          ref={helpRef}
+          className="absolute right-2 top-10 z-50 w-72 rounded-xl border border-mist-200 bg-white shadow-card"
+        >
+          <div className="flex items-center justify-between border-b border-mist-100 px-4 py-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-400">Markdown</span>
+            <button
+              type="button"
+              onClick={() => setShowHelp(false)}
+              className="text-[13px] text-ink-300 hover:text-ink-600"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="max-h-96 overflow-y-auto p-3">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-ink-300">Shortcuts</p>
+            <div className="mb-3 space-y-1.5">
+              {([
+                ["Bold", "Ctrl+B"],
+                ["Italic", "Ctrl+I"],
+                ["Heading 1–6", "Ctrl+1–6"],
+                ["Paragraph", "Ctrl+0"],
+                ["Source ↔ Preview", "Ctrl+/"],
+              ] as [string, string][]).map(([label, key]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-[12px] text-ink-500">{label}</span>
+                  <kbd className="rounded-md bg-mist-100 px-1.5 py-0.5 font-mono text-[10px] text-ink-500">{key}</kbd>
+                </div>
+              ))}
+            </div>
+
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-ink-300">Insert</p>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {insertActions.map(([label, fn]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => { fn(); setShowHelp(false); }}
+                  className="rounded-full border border-mist-200 bg-mist-50 px-2.5 py-0.5 text-[11px] text-ink-500 hover:border-accent-300 hover:text-accent-600"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-ink-300">Syntax</p>
+            <div className="space-y-0.5 font-mono text-[11px] text-ink-400">
+              {[
+                "**bold**   *italic*",
+                "~~strike~~   ==mark==",
+                "# H1  ## H2  ### H3",
+                "[text](url)   ![alt](url)",
+                "- item   1. item   - [ ] task",
+                "> quote   ---",
+                "`inline`   ```lang",
+                "$inline$   $$block$$",
+                ":smile: → 😊",
+              ].map((line) => (
+                <div key={line}>{line}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {editorState.renderMode === "source" ? (
         <textarea
