@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
+import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
 
 type LocalTask = {
   id: string;
@@ -164,12 +165,17 @@ export default function ProductivityLayer({
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               new Notification("Overdue task", { body: latestMessage });
             }
-            reminderMap[task.id] = {
-              ...reminderMap[task.id],
-              lastEscalationAt: now
-            };
+            reminderMap[task.id] = { ...reminderMap[task.id], lastEscalationAt: now };
             if (followupMap[task.id] === "open" || !followupMap[task.id]) {
               followupMap[task.id] = "missed";
+              // Schedule a push notification for the next escalation in 1 hour
+              scheduleNotifications({
+                sourceId: task.id,
+                sourceType: "reminder",
+                title: `Still overdue: ${task.title}`,
+                dueAt: new Date(now + escalationInterval).toISOString(),
+                reminderWindows: [0]
+              });
             }
             updated = true;
           }
@@ -235,33 +241,55 @@ export default function ProductivityLayer({
     writeJson(FOLLOWUP_STORAGE_KEY, next);
   }
 
+  function rescheduleTaskNotifications(taskId: string, newDueAt: string) {
+    const taskList = readJson<LocalTask[]>(TASK_STORAGE_KEY, []);
+    const task = taskList.find((t) => t.id === taskId);
+    if (!task) return;
+    cancelNotifications(taskId).then(() => {
+      scheduleNotifications({
+        sourceId: taskId,
+        sourceType: "task",
+        title: task.title,
+        dueAt: newDueAt,
+        reminderWindows: getReminderWindows()
+      });
+    });
+  }
+
   function snooze(taskId: string, minutes: number) {
-    updateTask(taskId, (task) => ({ ...task, dueAt: new Date(Date.now() + minutes * 60_000).toISOString() }));
+    const newDueAt = new Date(Date.now() + minutes * 60_000).toISOString();
+    updateTask(taskId, (task) => ({ ...task, dueAt: newDueAt }));
     setFollowup(taskId, "snoozed");
     setReminderMessage(`Snoozed for ${minutes} minutes.`);
+    rescheduleTaskNotifications(taskId, newDueAt);
   }
 
   function moveLaterToday(taskId: string) {
     const now = new Date();
     const target = new Date();
     target.setHours(Math.max(now.getHours() + 2, 17), 0, 0, 0);
-    updateTask(taskId, (task) => ({ ...task, dueAt: target.toISOString() }));
+    const newDueAt = target.toISOString();
+    updateTask(taskId, (task) => ({ ...task, dueAt: newDueAt }));
     setFollowup(taskId, "later");
     setReminderMessage("Moved to later today.");
+    rescheduleTaskNotifications(taskId, newDueAt);
   }
 
   function moveTomorrow(taskId: string) {
     const target = new Date();
     target.setDate(target.getDate() + 1);
     target.setHours(10, 0, 0, 0);
-    updateTask(taskId, (task) => ({ ...task, dueAt: target.toISOString() }));
+    const newDueAt = target.toISOString();
+    updateTask(taskId, (task) => ({ ...task, dueAt: newDueAt }));
     setFollowup(taskId, "later");
     setReminderMessage("Moved to tomorrow 10:00 AM.");
+    rescheduleTaskNotifications(taskId, newDueAt);
   }
 
   function markDone(taskId: string) {
     updateTask(taskId, (task) => ({ ...task, completed: true }));
     setFollowup(taskId, "done");
+    cancelNotifications(taskId);
   }
 
   function requestNotifications() {

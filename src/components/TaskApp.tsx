@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import { extractMarkdownUrls } from "@/lib/markdown";
+import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
 
 type Task = {
   id: string;
@@ -100,16 +101,26 @@ export default function TaskApp() {
 
   function addTask() {
     if (!title.trim()) return;
+    const resolvedDueAt = dueAt ? new Date(dueAt).toISOString() : null;
     const newTask: Task = {
       id: buildId(),
       title: title.trim(),
       notes: notes.trim(),
       completed: false,
       pinned: false,
-      dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+      dueAt: resolvedDueAt,
       createdAt: Date.now()
     };
     setTasks((prev) => [newTask, ...prev]);
+    if (resolvedDueAt) {
+      scheduleNotifications({
+        sourceId: newTask.id,
+        sourceType: "task",
+        title: newTask.title,
+        dueAt: resolvedDueAt,
+        reminderWindows: getReminderWindows()
+      });
+    }
     setTitle("");
     setNotes("");
     setDueAt("");
@@ -130,6 +141,7 @@ export default function TaskApp() {
       delete next[id];
       return next;
     });
+    cancelNotifications(id);
   }
 
   function toggleNotes(id: string) {
@@ -160,18 +172,26 @@ export default function TaskApp() {
 
   function saveEdit(id: string) {
     if (!editTitle.trim()) return;
+    const resolvedDueAt = editDueAt ? new Date(editDueAt).toISOString() : null;
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id
-          ? {
-              ...task,
-              title: editTitle.trim(),
-              notes: editNotes.trim(),
-              dueAt: editDueAt ? new Date(editDueAt).toISOString() : null
-            }
+          ? { ...task, title: editTitle.trim(), notes: editNotes.trim(), dueAt: resolvedDueAt }
           : task
       )
     );
+    // Cancel old notifications, then reschedule if there's a due date
+    cancelNotifications(id).then(() => {
+      if (resolvedDueAt) {
+        scheduleNotifications({
+          sourceId: id,
+          sourceType: "task",
+          title: editTitle.trim(),
+          dueAt: resolvedDueAt,
+          reminderWindows: getReminderWindows()
+        });
+      }
+    });
     cancelEdit();
   }
 
