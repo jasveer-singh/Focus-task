@@ -14,7 +14,7 @@ type Task = {
 const STORAGE_KEY = "focus-tasks-v1";
 const FIRED_KEY = "focus-notif-fired-v1";
 
-function getTask(): Task[] {
+function getTasks(): Task[] {
   if (typeof window === "undefined") return [];
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]") as Task[];
@@ -45,6 +45,23 @@ function windowLabel(minutes: number): string {
   return `${minutes / 1440}d`;
 }
 
+// Use service worker showNotification — works on all browsers including Safari
+// without requiring a user gesture, unlike new Notification() inside setTimeout.
+async function showNotification(title: string, options: NotificationOptions) {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, options);
+    } else {
+      new Notification(title, options);
+    }
+  } catch {
+    // Fallback to basic Notification if SW isn't available
+    try { new Notification(title, options); } catch { /* ignore */ }
+  }
+}
+
 export function useNotificationScheduler() {
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -57,21 +74,18 @@ export function useNotificationScheduler() {
     if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
     clearAll();
 
-    const tasks = getTask();
+    const tasks = getTasks();
     const fired = getFired();
     const windows = getReminderWindows();
     const now = Date.now();
 
-    // Prune fired keys older than 2 days to keep localStorage tidy
+    // Prune fired keys older than 2 days
     const twoDaysAgo = now - 2 * 24 * 60 * 60 * 1000;
     let pruned = false;
     for (const key of Object.keys(fired)) {
-      const [, , tsStr] = key.split(":");
-      const ts = Number(tsStr);
-      if (ts && ts < twoDaysAgo) {
-        delete fired[key];
-        pruned = true;
-      }
+      const parts = key.split(":");
+      const ts = Number(parts[parts.length - 1]);
+      if (ts && ts < twoDaysAgo) { delete fired[key]; pruned = true; }
     }
     if (pruned) localStorage.setItem(FIRED_KEY, JSON.stringify(fired));
 
@@ -88,12 +102,10 @@ export function useNotificationScheduler() {
 
         const delay = fireAt - now;
         const timer = setTimeout(() => {
-          if (Notification.permission === "granted") {
-            new Notification(`Upcoming: ${task.title}`, {
-              body: `Due in ${windowLabel(win)}`,
-              tag: `${task.id}-pre${win}`
-            });
-          }
+          showNotification(`Upcoming: ${task.title}`, {
+            body: `Due in ${windowLabel(win)}`,
+            tag: `${task.id}-pre${win}`
+          });
           markFired(key);
         }, delay);
         timersRef.current.push(timer);
@@ -104,12 +116,10 @@ export function useNotificationScheduler() {
       if (!fired[dueKey] && due > now) {
         const delay = due - now;
         const timer = setTimeout(() => {
-          if (Notification.permission === "granted") {
-            new Notification(`Due now: ${task.title}`, {
-              body: "This task is due.",
-              tag: `${task.id}-due`
-            });
-          }
+          showNotification(`Due now: ${task.title}`, {
+            body: "This task is due.",
+            tag: `${task.id}-due`
+          });
           markFired(dueKey);
         }, delay);
         timersRef.current.push(timer);
@@ -120,7 +130,6 @@ export function useNotificationScheduler() {
   useEffect(() => {
     schedule();
 
-    // Reschedule whenever tasks or reminder windows change
     const onTasksUpdate = () => schedule();
     const onWindowsChange = () => schedule();
     window.addEventListener("focus-tasks-updated", onTasksUpdate);
