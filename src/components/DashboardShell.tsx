@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import CalendarSyncPanel from "@/components/CalendarSyncPanel";
+import NotificationSetup from "@/components/NotificationSetup";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import TaskApp from "@/components/TaskApp";
 
@@ -55,6 +56,8 @@ export default function DashboardShell({ email }: { email: string | null | undef
             );
           })}
         </nav>
+
+        <NotificationSetup />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col gap-4">
