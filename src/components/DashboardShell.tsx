@@ -6,6 +6,7 @@ import CalendarSyncPanel from "@/components/CalendarSyncPanel";
 import NotificationSetup from "@/components/NotificationSetup";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import TaskApp from "@/components/TaskApp";
+import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 
 type ModuleKey = "tasks" | "reminders" | "feedback" | "ideas" | "calendar";
 
@@ -19,6 +20,7 @@ const MODULES: Array<{ key: ModuleKey; label: string; description: string }> = [
 
 export default function DashboardShell({ email }: { email: string | null | undefined }) {
   const [activeModule, setActiveModule] = useState<ModuleKey>("tasks");
+  useNotificationScheduler();
 
   const activeMeta = useMemo(
     () => MODULES.find((module) => module.key === activeModule) ?? MODULES[0],
