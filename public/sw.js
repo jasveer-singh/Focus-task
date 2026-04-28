@@ -1,5 +1,13 @@
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
+  console.log("[SW] push event received", event.data ? "with data" : "no data");
+
+  if (!event.data) {
+    console.log("[SW] no data, showing default notification");
+    event.waitUntil(
+      self.registration.showNotification("Focus Tasks", { body: "You have a new notification." })
+    );
+    return;
+  }
 
   let payload;
   try {
@@ -7,6 +15,8 @@ self.addEventListener("push", (event) => {
   } catch {
     payload = { title: "Focus Tasks", body: event.data.text() };
   }
+
+  console.log("[SW] showing notification:", payload.title || "Focus Tasks");
 
   const title = payload.title || "Focus Tasks";
   const options = {
@@ -19,7 +29,11 @@ self.addEventListener("push", (event) => {
     actions: payload.actions || []
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+      .then(() => console.log("[SW] notification shown"))
+      .catch((err) => console.error("[SW] showNotification failed:", err))
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
