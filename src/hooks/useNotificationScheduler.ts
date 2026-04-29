@@ -45,20 +45,20 @@ function windowLabel(minutes: number): string {
   return `${minutes / 1440}d`;
 }
 
-// Use service worker showNotification — works on all browsers including Safari
-// without requiring a user gesture, unlike new Notification() inside setTimeout.
+// Use new Notification() as primary — confirmed working on macOS Chrome.
+// Fall back to service worker showNotification if direct API throws.
 async function showNotification(title: string, options: NotificationOptions) {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
-    if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(title, options);
-    } else {
-      new Notification(title, options);
-    }
+    new Notification(title, options);
   } catch {
-    // Fallback to basic Notification if SW isn't available
-    try { new Notification(title, options); } catch { /* ignore */ }
+    // Fallback to SW showNotification (e.g. some mobile/stricter browsers)
+    try {
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(title, options);
+      }
+    } catch { /* ignore */ }
   }
 }
 
