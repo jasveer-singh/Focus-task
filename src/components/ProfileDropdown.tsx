@@ -202,7 +202,7 @@ function LogoutModal({
           </div>
         </div>
         <p className="text-sm text-ink-muted leading-relaxed">
-          You'll be signed out of this account. Any unsaved changes will remain stored locally.
+          You will be signed out of this account. Any unsaved changes will remain stored locally.
         </p>
       </div>
       <div className="flex items-center justify-end gap-3 border-t border-hairline px-6 py-4">
