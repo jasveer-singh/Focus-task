@@ -52,20 +52,20 @@ function windowLabel(minutes: number): string {
   return `${minutes / 1440}d`;
 }
 
-// Use new Notification() as primary — confirmed working on macOS Chrome.
-// Fall back to service worker showNotification if direct API throws.
+// Use SW showNotification as primary — required for action buttons (Done / Snooze / Pick time).
+// Falls back to new Notification() if SW is unavailable.
 async function showNotification(title: string, options: NotificationOptionsWithActions) {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
-    new Notification(title, options as NotificationOptions);
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, options as NotificationOptions);
+    } else {
+      new Notification(title, options as NotificationOptions);
+    }
   } catch {
-    // Fallback to SW showNotification (e.g. some mobile/stricter browsers)
-    try {
-      if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        await reg.showNotification(title, options as NotificationOptions);
-      }
-    } catch { /* ignore */ }
+    // Last-resort fallback
+    try { new Notification(title, options as NotificationOptions); } catch { /* ignore */ }
   }
 }
 
