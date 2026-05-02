@@ -6,6 +6,7 @@ import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import { extractMarkdownUrls } from "@/lib/markdown";
 import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
+import { useTaskActions } from "@/hooks/useTaskActions";
 
 type Task = {
   id: string;
@@ -44,6 +45,14 @@ export default function TaskApp() {
   const [dueAt, setDueAt] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
   const ignoreNextStorageSyncRef = useRef(false);
+  // taskId waiting for "pick new time" edit — set when app opens from a notification action
+  const [pendingPickTimeId, setPendingPickTimeId] = useState<string | null>(null);
+
+  // Handle notification action buttons: Done / Snooze 1hr / Pick new time
+  useTaskActions((taskId) => {
+    // "Pick new time" — open the edit form for this task
+    setPendingPickTimeId(taskId);
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -57,6 +66,17 @@ export default function TaskApp() {
     }
     setHasHydrated(true);
   }, []);
+
+  // Once tasks load, open edit form if "pick new time" was requested from a notification
+  useEffect(() => {
+    if (!hasHydrated || !pendingPickTimeId) return;
+    const task = tasks.find((t) => t.id === pendingPickTimeId);
+    if (task) {
+      startEdit(task);
+      setPendingPickTimeId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasHydrated, pendingPickTimeId]);
 
   useEffect(() => {
     function reloadFromStorage() {

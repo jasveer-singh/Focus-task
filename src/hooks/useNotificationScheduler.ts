@@ -11,6 +11,13 @@ type Task = {
   dueAt: string | null;
 };
 
+// `actions` is a valid web notification option but not in all TS DOM libs
+type NotificationAction = { action: string; title: string; icon?: string };
+type NotificationOptionsWithActions = NotificationOptions & {
+  actions?: NotificationAction[];
+  data?: Record<string, unknown>;
+};
+
 const STORAGE_KEY = "focus-tasks-v1";
 const FIRED_KEY = "focus-notif-fired-v1";
 
@@ -47,16 +54,16 @@ function windowLabel(minutes: number): string {
 
 // Use new Notification() as primary — confirmed working on macOS Chrome.
 // Fall back to service worker showNotification if direct API throws.
-async function showNotification(title: string, options: NotificationOptions) {
+async function showNotification(title: string, options: NotificationOptionsWithActions) {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
-    new Notification(title, options);
+    new Notification(title, options as NotificationOptions);
   } catch {
     // Fallback to SW showNotification (e.g. some mobile/stricter browsers)
     try {
       if ("serviceWorker" in navigator) {
         const reg = await navigator.serviceWorker.ready;
-        await reg.showNotification(title, options);
+        await reg.showNotification(title, options as NotificationOptions);
       }
     } catch { /* ignore */ }
   }
@@ -95,6 +102,12 @@ export function useNotificationScheduler() {
       if (!Number.isFinite(due)) continue;
 
       // Reminder windows
+      const taskActions: Array<NotificationAction> = [
+        { action: "done",      title: "✅ Done"          },
+        { action: "snooze",    title: "⏰ Snooze 1 hr"   },
+        { action: "pick-time", title: "📅 Pick new time"  }
+      ];
+
       for (const win of windows) {
         const fireAt = due - win * 60_000;
         const key = `${task.id}:pre${win}:${fireAt}`;
@@ -104,7 +117,9 @@ export function useNotificationScheduler() {
         const timer = setTimeout(() => {
           showNotification(`Upcoming: ${task.title}`, {
             body: `Due in ${windowLabel(win)}`,
-            tag: `${task.id}-pre${win}`
+            tag: `${task.id}-pre${win}`,
+            data: { taskId: task.id },
+            actions: taskActions
           });
           markFired(key);
         }, delay);
@@ -118,7 +133,9 @@ export function useNotificationScheduler() {
         const timer = setTimeout(() => {
           showNotification(`Due now: ${task.title}`, {
             body: "This task is due.",
-            tag: `${task.id}-due`
+            tag: `${task.id}-due`,
+            data: { taskId: task.id },
+            actions: taskActions
           });
           markFired(dueKey);
         }, delay);
