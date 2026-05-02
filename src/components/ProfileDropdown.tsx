@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { signOut, signIn } from "next-auth/react";
 import {
   REMINDER_WINDOW_OPTIONS,
@@ -32,6 +33,11 @@ function getDisplayName(name?: string | null, email?: string | null) {
 // ─── Modal shell ───────────────────────────────────────────────────────────
 
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  // Portal needs document to exist — only mount on client
+  useEffect(() => { setMounted(true); }, []);
+
   // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -39,16 +45,20 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
+  if (!mounted) return null;
+
+  // Render into document.body to escape the sticky sidebar's stacking context
+  return createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(20,20,19,0.45)" }}
+      style={{ backgroundColor: "rgba(20,20,19,0.55)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="animate-fade w-full max-w-md rounded-xl border border-hairline bg-canvas shadow-subtle flex flex-col max-h-[90vh]">
+      <div className="animate-fade w-full max-w-md rounded-xl border border-hairline bg-white shadow-lg flex flex-col max-h-[90vh]">
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
