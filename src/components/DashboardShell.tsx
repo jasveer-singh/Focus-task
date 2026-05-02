@@ -30,19 +30,20 @@ export default function DashboardShell({ email }: { email: string | null | undef
   return (
     <div className="mx-auto flex w-full max-w-[1400px] min-h-screen gap-0 px-0">
 
-      {/* ── Sidebar (dark surface — Claude.ai style) ──────────────────────── */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-surface-dark lg:flex">
+      {/* ── Sidebar (coral CTA shade) ────────────────────────────────────── */}
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col lg:flex"
+        style={{ backgroundColor: "#b8694e" }}>
         {/* Brand */}
-        <div className="px-5 pt-8 pb-6 border-b border-surface-dark-elevated">
+        <div className="px-5 pt-8 pb-6 border-b border-white/10">
           {/* Spike mark */}
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="mb-3">
             <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
-              stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
+              stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          <p className="font-display text-xl font-normal tracking-[-0.3px] text-on-dark">
+          <p className="font-display text-xl font-normal tracking-[-0.3px] text-white">
             Focus Tasks
           </p>
-          <p className="mt-1 text-xs text-on-dark-soft truncate">{email ?? "Signed in"}</p>
+          <p className="mt-1 text-xs text-white/60 truncate">{email ?? "Signed in"}</p>
         </div>
 
         {/* Nav */}
@@ -56,12 +57,12 @@ export default function DashboardShell({ email }: { email: string | null | undef
                 onClick={() => setActiveModule(mod.key)}
                 className={`w-full rounded-md px-3 py-2.5 text-left transition-colors ${
                   active
-                    ? "bg-surface-dark-elevated text-on-dark"
-                    : "text-on-dark-soft hover:bg-surface-dark-elevated/60 hover:text-on-dark"
+                    ? "bg-white/20 text-white"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <p className="text-sm font-medium leading-none">{mod.label}</p>
-                <p className="mt-1 text-xs text-on-dark-soft leading-none">{mod.description}</p>
+                <p className="mt-1 text-xs text-white/50 leading-none">{mod.description}</p>
               </button>
             );
           })}
@@ -74,7 +75,7 @@ export default function DashboardShell({ email }: { email: string | null | undef
       </aside>
 
       {/* ── Mobile top bar ────────────────────────────────────────────────── */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center gap-3 bg-surface-dark px-4 py-3 lg:hidden">
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center gap-3 px-4 py-3 lg:hidden" style={{ backgroundColor: "#b8694e" }}>
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
           <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
             stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
