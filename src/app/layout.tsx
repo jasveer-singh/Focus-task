@@ -3,7 +3,7 @@ import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Focus Tasks",
+  title: "Suru",
   description: "Task list with clean, expandable notes."
 };
 

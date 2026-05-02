@@ -1,7 +1,7 @@
 self.addEventListener("push", (event) => {
   if (!event.data) {
     event.waitUntil(
-      self.registration.showNotification("Focus Tasks", { body: "You have a new notification." })
+      self.registration.showNotification("Suru", { body: "You have a new notification." })
     );
     return;
   }
@@ -10,17 +10,17 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: "Focus Tasks", body: event.data.text() };
+    payload = { title: "Suru", body: event.data.text() };
   }
 
-  const title = payload.title || "Focus Tasks";
+  const title = payload.title || "Suru";
   const taskId = payload.data?.taskId;
 
   const options = {
     body: payload.body || "",
     icon: "/icon-192.png",
     badge: "/icon-192.png",
-    tag: payload.tag || "focus-tasks",
+    tag: payload.tag || "suru",
     data: payload.data || {},
     requireInteraction: payload.requireInteraction || false,
     actions: taskId

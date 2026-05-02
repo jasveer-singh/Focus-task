@@ -21,7 +21,7 @@ export default async function SignInPage({
             <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
               stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
-          <span className="font-display text-xl font-normal text-ink">Focus Tasks</span>
+          <span className="font-display text-xl font-normal text-ink">Suru</span>
         </div>
 
         {/* Card */}

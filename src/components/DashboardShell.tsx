@@ -40,7 +40,7 @@ export default function DashboardShell({ email, name }: { email?: string | null;
               <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
                 stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
-            <span className="font-display text-base font-normal text-white">Focus Tasks</span>
+            <span className="font-display text-base font-normal text-white">Suru</span>
           </div>
           {/* Profile dropdown trigger */}
           <ProfileDropdown name={name} email={email} />
@@ -92,7 +92,7 @@ export default function DashboardShell({ email, name }: { email?: string | null;
           <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
             stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
-        <span className="font-display text-base text-on-dark">Focus Tasks</span>
+        <span className="font-display text-base text-on-dark">Suru</span>
         <div className="ml-auto flex gap-1 overflow-x-auto">
           {MODULES.map((mod) => {
             const active = mod.key === activeModule;
