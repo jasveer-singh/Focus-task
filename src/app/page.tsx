@@ -24,7 +24,7 @@ export default async function Page() {
           </button>
         </form>
       </div>
-      <DashboardShell email={session?.user?.email} />
+      <DashboardShell email={session?.user?.email} name={session?.user?.name} />
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import CalendarSyncPanel from "@/components/CalendarSyncPanel";
 import NotificationSetup from "@/components/NotificationSetup";
 import ProductivityLayer from "@/components/ProductivityLayer";
+import ProfileDropdown from "@/components/ProfileDropdown";
 import TaskApp from "@/components/TaskApp";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 
@@ -18,7 +19,7 @@ const MODULES: Array<{ key: ModuleKey; label: string; description: string }> = [
   { key: "calendar",  label: "Calendar",  description: "Google Calendar sync"       }
 ];
 
-export default function DashboardShell({ email }: { email: string | null | undefined }) {
+export default function DashboardShell({ email, name }: { email?: string | null; name?: string | null }) {
   const [activeModule, setActiveModule] = useState<ModuleKey>("tasks");
   useNotificationScheduler();
 
@@ -34,16 +35,16 @@ export default function DashboardShell({ email }: { email: string | null | undef
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col lg:flex"
         style={{ backgroundColor: "#b8694e" }}>
         {/* Brand */}
-        <div className="px-5 pt-8 pb-6 border-b border-white/10">
-          {/* Spike mark */}
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="mb-3">
-            <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
-              stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <p className="font-display text-xl font-normal tracking-[-0.3px] text-white">
-            Focus Tasks
-          </p>
-          <p className="mt-1 text-xs text-white/60 truncate">{email ?? "Signed in"}</p>
+        <div className="px-4 pt-6 pb-4 border-b border-white/10">
+          <div className="flex items-center gap-2 mb-4">
+            <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+              <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
+                stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span className="font-display text-base font-normal text-white">Focus Tasks</span>
+          </div>
+          {/* Profile dropdown trigger */}
+          <ProfileDropdown name={name} email={email} />
         </div>
 
         {/* Nav */}
