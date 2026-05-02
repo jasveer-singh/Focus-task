@@ -2,6 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { signOut, signIn } from "next-auth/react";
+import {
+  REMINDER_WINDOW_OPTIONS,
+  getReminderWindows,
+  registerServiceWorker,
+  setReminderWindows,
+  subscribeToPush,
+  unsubscribeFromPush
+} from "@/lib/notifications";
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -107,6 +117,71 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     return "system";
   });
 
+  // ── Notification state ──────────────────────────────────────────────────
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("unsupported");
+  const [subscribed, setSubscribed]  = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [windows, setWindows] = useState<number[]>([30]);
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined") setPermission(Notification.permission);
+    setWindows(getReminderWindows());
+    navigator.serviceWorker?.ready.then(async (reg) => {
+      const sub = await reg.pushManager.getSubscription();
+      setSubscribed(!!sub);
+    });
+  }, []);
+
+  async function enableNotifications() {
+    setNotifLoading(true);
+    try {
+      const perm = await Notification.requestPermission();
+      setPermission(perm);
+      if (perm !== "granted") return;
+      const reg = await registerServiceWorker();
+      if (!reg) return;
+      const sub = await subscribeToPush(reg, VAPID_PUBLIC_KEY);
+      if (!sub) return;
+      const json = sub.toJSON();
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth } })
+      });
+      setSubscribed(true);
+    } finally {
+      setNotifLoading(false);
+    }
+  }
+
+  async function disableNotifications() {
+    setNotifLoading(true);
+    try {
+      const reg = await navigator.serviceWorker?.ready;
+      if (!reg) return;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        await unsubscribeFromPush(reg);
+      }
+      setSubscribed(false);
+    } finally {
+      setNotifLoading(false);
+    }
+  }
+
+  function toggleWindow(minutes: number) {
+    const next = windows.includes(minutes) ? windows.filter((w) => w !== minutes) : [...windows, minutes];
+    const safe = next.length === 0 ? [30] : next;
+    setWindows(safe);
+    setReminderWindows(safe);
+    window.dispatchEvent(new Event("focus-reminder-windows-changed"));
+  }
+
   function applyTheme(t: Theme) {
     setTheme(t);
     localStorage.setItem("focus-theme", t);
@@ -145,13 +220,70 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Notifications hint */}
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[1.2px] text-ink-muted mb-3">Notifications</p>
-          <p className="text-sm text-ink-muted leading-relaxed">
-            Manage notification preferences from the <span className="font-medium text-ink">Reminders</span> tab in the sidebar.
-          </p>
-        </div>
+        {/* Notifications */}
+        {permission !== "unsupported" && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-medium uppercase tracking-[1.2px] text-ink-muted">Notifications</p>
+              {subscribed && (
+                <span className="rounded-pill bg-coral/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-coral">
+                  Active
+                </span>
+              )}
+            </div>
+
+            {permission === "denied" ? (
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Notifications are blocked. Allow them in your browser settings to enable alerts.
+              </p>
+            ) : subscribed ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-xs text-ink-muted">Remind me before due time</p>
+                <div className="flex flex-wrap gap-2">
+                  {REMINDER_WINDOW_OPTIONS.map((opt) => {
+                    const active = windows.includes(opt.minutes);
+                    return (
+                      <button
+                        key={opt.minutes}
+                        type="button"
+                        onClick={() => toggleWindow(opt.minutes)}
+                        className={`rounded-md border px-3 py-1.5 text-xs font-medium transition ${
+                          active
+                            ? "border-coral bg-coral/10 text-coral"
+                            : "border-hairline bg-canvas text-ink-muted hover:border-coral/50 hover:text-ink"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={disableNotifications}
+                  disabled={notifLoading}
+                  className="self-start rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral disabled:opacity-50"
+                >
+                  {notifLoading ? "Disabling…" : "Disable notifications"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-ink-muted leading-relaxed">
+                  Get push notifications when tasks are due.
+                </p>
+                <button
+                  type="button"
+                  onClick={enableNotifications}
+                  disabled={notifLoading}
+                  className="self-start rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active disabled:opacity-50"
+                >
+                  {notifLoading ? "Enabling…" : "Enable notifications"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="border-t border-hairline px-6 py-4">
         <button

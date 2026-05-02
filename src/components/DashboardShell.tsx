@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 
 import CalendarSyncPanel from "@/components/CalendarSyncPanel";
-import NotificationSetup from "@/components/NotificationSetup";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import TaskApp from "@/components/TaskApp";
@@ -85,10 +84,6 @@ export default function DashboardShell({ email, name }: { email?: string | null;
           })}
         </nav>
 
-        {/* Notifications */}
-        <div className="px-3 pb-6">
-          <NotificationSetup />
-        </div>
       </aside>
 
       {/* ── Mobile top bar ────────────────────────────────────────────────── */}
