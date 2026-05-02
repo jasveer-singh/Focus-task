@@ -47,12 +47,19 @@ export default function TaskApp() {
   const ignoreNextStorageSyncRef = useRef(false);
   // taskId waiting for "pick new time" edit — set when app opens from a notification action
   const [pendingPickTimeId, setPendingPickTimeId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Handle notification action buttons: Done / Snooze 1hr / Pick new time
   useTaskActions((taskId) => {
-    // "Pick new time" — open the edit form for this task
     setPendingPickTimeId(taskId);
   });
+
+  // Open create modal from sidebar "+" button
+  useEffect(() => {
+    const handler = () => setShowCreateModal(true);
+    window.addEventListener("focus-new-task", handler);
+    return () => window.removeEventListener("focus-new-task", handler);
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -119,6 +126,13 @@ export default function TaskApp() {
 
   const completedCount = tasks.filter((task) => task.completed).length;
 
+  function closeCreateModal() {
+    setShowCreateModal(false);
+    setTitle("");
+    setNotes("");
+    setDueAt("");
+  }
+
   function addTask() {
     if (!title.trim()) return;
     const resolvedDueAt = dueAt ? new Date(dueAt).toISOString() : null;
@@ -141,9 +155,7 @@ export default function TaskApp() {
         reminderWindows: getReminderWindows()
       });
     }
-    setTitle("");
-    setNotes("");
-    setDueAt("");
+    closeCreateModal();
   }
 
   function toggleComplete(id: string) {
@@ -259,36 +271,31 @@ export default function TaskApp() {
   }, [sortedTasks]);
 
   return (
-    <section className="flex w-full flex-col gap-10 px-8 py-10 lg:px-10">
-      {/* Hero header */}
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-8">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">
-            Your workspace
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-normal tracking-[-1px] text-ink md:text-5xl">
-            Work with clarity,<br />not clutter.
-          </h1>
-          <p className="mt-3 max-w-xl text-sm text-ink-muted leading-relaxed">
-            Capture tasks with structured notes. Notes stay tucked away until you choose to open them.
-          </p>
-        </div>
-        <span className="rounded-pill border border-hairline bg-surface-card px-4 py-1.5 text-xs font-medium text-ink-muted">
-          {completedCount} / {tasks.length} completed
-        </span>
-      </header>
-
-      <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
-        {/* ── New task form ──────────────────────────────────────── */}
-        <div className="flex flex-col gap-4">
-          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Create new</p>
+    <>
+    {/* ── Create task modal ──────────────────────────────────────── */}
+    {showCreateModal && (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(20,20,19,0.45)" }}
+        onMouseDown={(e) => { if (e.target === e.currentTarget) closeCreateModal(); }}
+      >
+        <div className="animate-fade w-full max-w-lg rounded-xl border border-hairline bg-canvas">
+          <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
+            <h2 className="font-display text-xl font-normal tracking-[-0.3px] text-ink">New task</h2>
+            <button type="button" onClick={closeCreateModal} className="rounded-md p-1 text-ink-soft transition hover:text-ink">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
           <form
-            className="flex flex-col gap-4 rounded-lg border border-hairline bg-surface-card p-6"
+            className="flex flex-col gap-4 px-6 py-5"
             onSubmit={(e) => { e.preventDefault(); addTask(); }}
           >
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-ink-muted">Task title</label>
               <input
+                autoFocus
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Draft outreach email"
@@ -300,8 +307,8 @@ export default function TaskApp() {
               <MarkdownEditor
                 value={notes}
                 onChange={setNotes}
-                placeholder="Markdown supported. Supports headings, task lists, tables, YAML front matter, and autolinks."
-                minHeight={140}
+                placeholder="Markdown supported…"
+                minHeight={120}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -313,19 +320,61 @@ export default function TaskApp() {
                 className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none transition focus:border-coral"
               />
             </div>
-            <button
-              type="submit"
-              className="mt-1 rounded-md bg-coral px-4 py-2.5 text-sm font-medium text-white transition hover:bg-coral-active"
-            >
-              Add task
-            </button>
-            <p className="text-xs text-ink-soft">Everything is stored locally in your browser.</p>
+            <div className="flex items-center justify-between border-t border-hairline pt-4">
+              <p className="text-xs text-ink-soft">Stored locally in your browser.</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active"
+                >
+                  Add task
+                </button>
+              </div>
+            </div>
           </form>
         </div>
+      </div>
+    )}
 
-        {/* ── Task list ─────────────────────────────────────────── */}
-        <div className="flex flex-col gap-6">
-          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Created tasks</p>
+    <section className="flex w-full flex-col gap-8 px-8 py-10 lg:px-10">
+      {/* Header */}
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-8">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Your workspace</p>
+          <h1 className="mt-2 font-display text-4xl font-normal tracking-[-1px] text-ink md:text-5xl">
+            Work with clarity,<br />not clutter.
+          </h1>
+          <p className="mt-3 max-w-xl text-sm text-ink-muted leading-relaxed">
+            Capture tasks with structured notes. Notes stay tucked away until you choose to open them.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="rounded-pill border border-hairline bg-surface-card px-3 py-1.5 text-xs font-medium text-ink-muted">
+            {completedCount} / {tasks.length} completed
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-1.5 rounded-md border border-dashed border-hairline px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            New task
+          </button>
+        </div>
+      </header>
+
+      {/* ── Task list ─────────────────────────────────────────── */}
+      <div className="flex flex-col gap-6">
+        <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Created tasks</p>
           {sortedTasks.length === 0 ? (
             <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
               No tasks yet. Add one to get started.
@@ -512,8 +561,8 @@ export default function TaskApp() {
               </div>
             ))
           )}
-        </div>
       </div>
     </section>
+    </>
   );
 }

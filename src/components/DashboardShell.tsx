@@ -52,19 +52,35 @@ export default function DashboardShell({ email, name }: { email?: string | null;
           {MODULES.map((mod) => {
             const active = mod.key === activeModule;
             return (
-              <button
-                key={mod.key}
-                type="button"
-                onClick={() => setActiveModule(mod.key)}
-                className={`w-full rounded-md px-3 py-2.5 text-left transition-colors ${
-                  active
-                    ? "bg-white/20 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                <p className="text-sm font-medium leading-none">{mod.label}</p>
-                <p className="mt-1 text-xs text-white/50 leading-none">{mod.description}</p>
-              </button>
+              <div key={mod.key} className="group relative">
+                <button
+                  type="button"
+                  onClick={() => setActiveModule(mod.key)}
+                  className={`w-full rounded-md px-3 py-2.5 text-left transition-colors pr-8 ${
+                    active
+                      ? "bg-white/20 text-white"
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <p className="text-sm font-medium leading-none">{mod.label}</p>
+                  <p className="mt-1 text-xs text-white/50 leading-none">{mod.description}</p>
+                </button>
+                {/* "+" button — visible on hover */}
+                <button
+                  type="button"
+                  aria-label={`New item in ${mod.label}`}
+                  onClick={() => {
+                    setActiveModule(mod.key);
+                    // Give React a tick to switch module before the event fires
+                    setTimeout(() => window.dispatchEvent(new Event("focus-new-task")), 50);
+                  }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/20"
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M5 1v8M1 5h8" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
             );
           })}
         </nav>
