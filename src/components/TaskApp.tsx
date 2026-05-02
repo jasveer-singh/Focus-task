@@ -275,7 +275,7 @@ export default function TaskApp() {
     {/* ── Create task modal ──────────────────────────────────────── */}
     {showCreateModal && (
       <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
         style={{ backgroundColor: "rgba(20,20,19,0.45)" }}
         onMouseDown={(e) => { if (e.target === e.currentTarget) closeCreateModal(); }}
       >
