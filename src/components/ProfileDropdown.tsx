@@ -293,7 +293,7 @@ export default function ProfileDropdown({
 
   return (
     <>
-      <div ref={ref} className="relative">
+      <div ref={ref}>
         {/* Trigger */}
         <button
           type="button"
@@ -315,9 +315,9 @@ export default function ProfileDropdown({
           </svg>
         </button>
 
-        {/* Dropdown — opens downward */}
+        {/* Dropdown — inline below trigger, pushes nav down */}
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-50 overflow-hidden rounded-lg border border-white/10 bg-white shadow-subtle animate-fade">
+          <div className="mt-1 overflow-hidden rounded-lg border border-white/10 bg-white animate-fade">
             {/* Header */}
             <div className="flex items-center gap-2.5 border-b border-hairline px-3 py-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
