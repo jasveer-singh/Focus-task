@@ -13,38 +13,50 @@ export default async function SignInPage({
   const isDev = process.env.NODE_ENV === "development";
 
   return (
-    <main className="min-h-screen bg-mist-50 text-ink-900">
-      <section className="mx-auto flex min-h-screen w-full max-w-lg items-center px-6 py-12">
-        <div className="w-full rounded-3xl bg-white p-8 shadow-card">
-          <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Focus Tasks</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold text-ink-900">
+    <main className="min-h-screen bg-canvas flex items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        {/* Brand mark */}
+        <div className="mb-8 flex items-center gap-2.5">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+            <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
+              stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span className="font-display text-xl font-normal text-ink">Focus Tasks</span>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-lg border border-hairline bg-surface-card p-8">
+          <h1 className="font-display text-3xl font-normal tracking-[-0.5px] text-ink">
             Sign in to continue
           </h1>
 
           {isDev ? (
             <>
-              <p className="mt-2 text-sm text-amber-500 font-medium">
-                ⚠️ Dev mode — enter any email to sign in instantly.
+              <p className="mt-2 text-sm text-amber leading-relaxed">
+                Dev mode — enter any email to access instantly.
               </p>
               <form
-                className="mt-8 flex flex-col gap-3"
+                className="mt-6 flex flex-col gap-3"
                 action={async (formData: FormData) => {
                   "use server";
                   const email = formData.get("email") as string;
                   await signIn("dev-credentials", { email, redirectTo: callbackUrl });
                 }}
               >
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="you@example.com"
-                  defaultValue="abhishekt646@gmail.com"
-                  className="w-full rounded-2xl border border-mist-200 px-4 py-3 text-sm text-ink-900 outline-none focus:border-accent-500"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-ink-muted">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    defaultValue="abhishekt646@gmail.com"
+                    className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none transition focus:border-coral"
+                  />
+                </div>
                 <button
                   type="submit"
-                  className="w-full rounded-2xl bg-accent-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
+                  className="mt-1 rounded-md bg-coral px-4 py-2.5 text-sm font-medium text-white transition hover:bg-coral-active"
                 >
                   Continue →
                 </button>
@@ -52,11 +64,11 @@ export default async function SignInPage({
             </>
           ) : (
             <>
-              <p className="mt-2 text-sm text-ink-500">
+              <p className="mt-2 text-sm text-ink-muted leading-relaxed">
                 Only authorized Google accounts can access this workspace.
               </p>
               <form
-                className="mt-8"
+                className="mt-6"
                 action={async () => {
                   "use server";
                   await signIn("google", { redirectTo: callbackUrl });
@@ -64,7 +76,7 @@ export default async function SignInPage({
               >
                 <button
                   type="submit"
-                  className="w-full rounded-2xl bg-accent-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
+                  className="w-full rounded-md bg-coral px-4 py-2.5 text-sm font-medium text-white transition hover:bg-coral-active"
                 >
                   Continue with Google
                 </button>
@@ -72,7 +84,11 @@ export default async function SignInPage({
             </>
           )}
         </div>
-      </section>
+
+        <p className="mt-6 text-center text-xs text-ink-soft">
+          Your data stays in your browser. Nothing is shared.
+        </p>
+      </div>
     </main>
   );
 }

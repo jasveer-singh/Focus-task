@@ -7,9 +7,9 @@ export default async function Page() {
   if (!session?.user) redirect("/signin");
 
   return (
-    <main className="min-h-screen bg-mist-50 text-ink-900">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-end gap-3 px-6 pt-8 md:px-12">
-        <span className="text-xs text-ink-500">{session?.user?.email}</span>
+    <main className="min-h-screen bg-canvas text-ink">
+      {/* Sign-out bar — only visible on mobile since sidebar handles it on desktop */}
+      <div className="fixed bottom-4 right-4 z-40 lg:hidden">
         <form
           action={async () => {
             "use server";
@@ -18,7 +18,7 @@ export default async function Page() {
         >
           <button
             type="submit"
-            className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+            className="rounded-pill border border-hairline bg-canvas px-3 py-1.5 text-xs font-medium text-ink-muted shadow-subtle transition hover:border-coral hover:text-coral"
           >
             Sign out
           </button>

@@ -11,11 +11,11 @@ import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 type ModuleKey = "tasks" | "reminders" | "feedback" | "ideas" | "calendar";
 
 const MODULES: Array<{ key: ModuleKey; label: string; description: string }> = [
-  { key: "tasks", label: "Tasks", description: "Task capture and execution" },
-  { key: "reminders", label: "Reminders", description: "Due queue and follow-ups" },
-  { key: "feedback", label: "Feedback", description: "Captured product feedback" },
-  { key: "ideas", label: "Ideas", description: "Inbox for notes and thoughts" },
-  { key: "calendar", label: "Calendar", description: "Google Calendar sync" }
+  { key: "tasks",     label: "Tasks",     description: "Task capture and execution" },
+  { key: "reminders", label: "Reminders", description: "Due queue and follow-ups"   },
+  { key: "feedback",  label: "Feedback",  description: "Captured product feedback"  },
+  { key: "ideas",     label: "Ideas",     description: "Inbox for notes and thoughts"},
+  { key: "calendar",  label: "Calendar",  description: "Google Calendar sync"       }
 ];
 
 export default function DashboardShell({ email }: { email: string | null | undefined }) {
@@ -23,81 +23,102 @@ export default function DashboardShell({ email }: { email: string | null | undef
   useNotificationScheduler();
 
   const activeMeta = useMemo(
-    () => MODULES.find((module) => module.key === activeModule) ?? MODULES[0],
+    () => MODULES.find((m) => m.key === activeModule) ?? MODULES[0],
     [activeModule]
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] gap-6 px-6 pb-12 md:px-8">
-      <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] w-64 shrink-0 rounded-3xl bg-white p-4 shadow-card lg:flex lg:flex-col">
-        <div className="border-b border-mist-200 px-2 pb-4">
-          <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Workspace</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-ink-900">Focus Tasks</h1>
-          <p className="mt-2 text-xs text-ink-500">{email || "Signed in"}</p>
+    <div className="mx-auto flex w-full max-w-[1400px] min-h-screen gap-0 px-0">
+
+      {/* ── Sidebar (dark surface — Claude.ai style) ──────────────────────── */}
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-surface-dark lg:flex">
+        {/* Brand */}
+        <div className="px-5 pt-8 pb-6 border-b border-surface-dark-elevated">
+          {/* Spike mark */}
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" className="mb-3">
+            <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
+              stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <p className="font-display text-xl font-normal tracking-[-0.3px] text-on-dark">
+            Focus Tasks
+          </p>
+          <p className="mt-1 text-xs text-on-dark-soft truncate">{email ?? "Signed in"}</p>
         </div>
 
-        <nav className="mt-4 flex flex-1 flex-col gap-2">
-          {MODULES.map((module) => {
-            const selected = module.key === activeModule;
+        {/* Nav */}
+        <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4">
+          {MODULES.map((mod) => {
+            const active = mod.key === activeModule;
             return (
               <button
-                key={module.key}
+                key={mod.key}
                 type="button"
-                onClick={() => setActiveModule(module.key)}
-                className={`rounded-2xl px-4 py-3 text-left transition ${
-                  selected
-                    ? "bg-accent-500 text-white shadow-glow"
-                    : "bg-mist-50 text-ink-600 hover:bg-mist-100"
+                onClick={() => setActiveModule(mod.key)}
+                className={`w-full rounded-md px-3 py-2.5 text-left transition-colors ${
+                  active
+                    ? "bg-surface-dark-elevated text-on-dark"
+                    : "text-on-dark-soft hover:bg-surface-dark-elevated/60 hover:text-on-dark"
                 }`}
               >
-                <p className="text-sm font-semibold">{module.label}</p>
-                <p className={`mt-1 text-xs ${selected ? "text-white/80" : "text-ink-400"}`}>
-                  {module.description}
-                </p>
+                <p className="text-sm font-medium leading-none">{mod.label}</p>
+                <p className="mt-1 text-xs text-on-dark-soft leading-none">{mod.description}</p>
               </button>
             );
           })}
         </nav>
 
-        <NotificationSetup />
+        {/* Notifications */}
+        <div className="px-3 pb-6">
+          <NotificationSetup />
+        </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <div className="rounded-3xl bg-white px-5 py-4 shadow-card lg:hidden">
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {MODULES.map((module) => {
-              const selected = module.key === activeModule;
-              return (
-                <button
-                  key={module.key}
-                  type="button"
-                  onClick={() => setActiveModule(module.key)}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${
-                    selected
-                      ? "bg-accent-500 text-white"
-                      : "border border-mist-200 bg-white text-ink-500"
-                  }`}
-                >
-                  {module.label}
-                </button>
-              );
-            })}
-          </div>
+      {/* ── Mobile top bar ────────────────────────────────────────────────── */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center gap-3 bg-surface-dark px-4 py-3 lg:hidden">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+          <path d="M9 0v18M0 9h18M2.636 2.636l12.728 12.728M15.364 2.636 2.636 15.364"
+            stroke="#cc785c" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <span className="font-display text-base text-on-dark">Focus Tasks</span>
+        <div className="ml-auto flex gap-1 overflow-x-auto">
+          {MODULES.map((mod) => {
+            const active = mod.key === activeModule;
+            return (
+              <button
+                key={mod.key}
+                type="button"
+                onClick={() => setActiveModule(mod.key)}
+                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  active
+                    ? "bg-surface-dark-elevated text-on-dark"
+                    : "text-on-dark-soft"
+                }`}
+              >
+                {mod.label}
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        <div className="rounded-3xl bg-white px-5 py-4 shadow-card">
-          <p className="text-sm uppercase tracking-[0.3em] text-ink-300">{activeMeta.label}</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold text-ink-900">
+      {/* ── Main content (cream canvas) ───────────────────────────────────── */}
+      <main className="flex-1 min-w-0 bg-canvas pt-12 lg:pt-0">
+        {/* Section header */}
+        <div className="border-b border-hairline px-8 py-5 lg:px-10">
+          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">
+            {activeMeta.label}
+          </p>
+          <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">
             {activeMeta.description}
           </h2>
         </div>
 
-        {activeModule === "tasks" ? <TaskApp /> : null}
-        {activeModule === "calendar" ? <CalendarSyncPanel /> : null}
+        {activeModule === "tasks"     ? <TaskApp /> : null}
+        {activeModule === "calendar"  ? <CalendarSyncPanel /> : null}
         {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" /> : null}
-        {activeModule === "feedback" ? <ProductivityLayer activeModule="feedback" /> : null}
-        {activeModule === "ideas" ? <ProductivityLayer activeModule="ideas" /> : null}
-      </div>
+        {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback"  /> : null}
+        {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas"     /> : null}
+      </main>
     </div>
   );
 }

@@ -259,186 +259,160 @@ export default function TaskApp() {
   }, [sortedTasks]);
 
   return (
-    <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 md:px-12">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">
-              Focus Tasks
-            </p>
-            <h1 className="font-display text-4xl font-semibold text-ink-900 md:text-5xl">
-              Work with clarity, not clutter.
-            </h1>
-          </div>
-          <div className="rounded-full bg-white px-4 py-2 text-sm text-ink-500 shadow-sm">
-            {completedCount}/{tasks.length} completed
-          </div>
+    <section className="flex w-full flex-col gap-10 px-8 py-10 lg:px-10">
+      {/* Hero header */}
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-8">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">
+            Your workspace
+          </p>
+          <h1 className="mt-2 font-display text-4xl font-normal tracking-[-1px] text-ink md:text-5xl">
+            Work with clarity,<br />not clutter.
+          </h1>
+          <p className="mt-3 max-w-xl text-sm text-ink-muted leading-relaxed">
+            Capture tasks with structured notes. Notes stay tucked away until you choose to open them.
+          </p>
         </div>
-        <p className="max-w-2xl text-base text-ink-500">
-          Capture tasks with structured notes. Notes stay tucked away until you
-          choose to open them.
-        </p>
+        <span className="rounded-pill border border-hairline bg-surface-card px-4 py-1.5 text-xs font-medium text-ink-muted">
+          {completedCount} / {tasks.length} completed
+        </span>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[1.1fr_1.4fr]">
-        <div className="flex flex-col gap-3">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Create new</p>
-            <h2 className="mt-2 text-xl font-semibold text-ink-900">New task</h2>
-          </div>
+      <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
+        {/* ── New task form ──────────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
+          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Create new</p>
           <form
-            className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-card"
-            onSubmit={(event) => {
-              event.preventDefault();
-              addTask();
-            }}
+            className="flex flex-col gap-4 rounded-lg border border-hairline bg-surface-card p-6"
+            onSubmit={(e) => { e.preventDefault(); addTask(); }}
           >
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-ink-700">
-                Task title
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-ink-muted">Task title</label>
               <input
                 value={title}
-                onChange={(event) => setTitle(event.target.value)}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="Draft outreach email"
-                className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-soft focus:border-coral"
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-ink-700">
-                Notes (optional)
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-ink-muted">Notes (optional)</label>
               <MarkdownEditor
                 value={notes}
                 onChange={setNotes}
                 placeholder="Markdown supported. Supports headings, task lists, tables, YAML front matter, and autolinks."
-                minHeight={160}
+                minHeight={140}
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-ink-700">
-                Due date & time
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-ink-muted">Due date & time</label>
               <input
                 type="datetime-local"
                 value={dueAt}
-                onChange={(event) => setDueAt(event.target.value)}
-                className="rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                onChange={(e) => setDueAt(e.target.value)}
+                className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none transition focus:border-coral"
               />
             </div>
             <button
               type="submit"
-              className="mt-2 rounded-2xl bg-accent-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-accent-600"
+              className="mt-1 rounded-md bg-coral px-4 py-2.5 text-sm font-medium text-white transition hover:bg-coral-active"
             >
               Add task
             </button>
-            <p className="text-xs text-ink-300">
-              Everything is stored locally in your browser.
-            </p>
+            <p className="text-xs text-ink-soft">Everything is stored locally in your browser.</p>
           </form>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-ink-300">Existing</p>
-            <h2 className="mt-2 text-xl font-semibold text-ink-900">Created tasks</h2>
-          </div>
+        {/* ── Task list ─────────────────────────────────────────── */}
+        <div className="flex flex-col gap-6">
+          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Created tasks</p>
           {sortedTasks.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-mist-200 bg-white/70 p-10 text-center text-sm text-ink-500">
+            <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
               No tasks yet. Add one to get started.
             </div>
           ) : (
             ([
-              { key: "today", label: "Due today", items: sectionedTasks.today },
-              { key: "week", label: "Due this week", items: sectionedTasks.week },
+              { key: "today", label: "Due today",      items: sectionedTasks.today },
+              { key: "week",  label: "Due this week",  items: sectionedTasks.week  },
               { key: "month", label: "Due this month", items: sectionedTasks.month }
             ] as const).map((section) => (
-              <div key={section.key} className="flex flex-col gap-3">
+              <div key={section.key} className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-ink-300">
+                  <h2 className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">
                     {section.label}
                   </h2>
-                  <span className="text-xs text-ink-300">
-                    {section.items.length} tasks
-                  </span>
+                  <span className="text-xs text-ink-soft">{section.items.length} tasks</span>
                 </div>
                 {section.items.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-mist-200 bg-white/70 p-6 text-center text-xs text-ink-300">
+                  <div className="rounded-lg border border-dashed border-hairline-soft p-5 text-center text-xs text-ink-soft">
                     Nothing here yet.
                   </div>
                 ) : (
                   section.items.map((task, index) => {
-                    const isOpen = expanded[task.id];
+                    const isOpen    = expanded[task.id];
                     const isEditing = editingId === task.id;
-                    const preview = clampPreview(task.notes);
-                    const overdue = isOverdue(task.dueAt);
+                    const preview   = clampPreview(task.notes);
+                    const overdue   = isOverdue(task.dueAt);
                     return (
                       <article
                         key={task.id}
-                        className={`animate-rise rounded-3xl bg-white p-5 shadow-card ${
-                          overdue ? "border border-accent-500/40" : ""
-                        }`}
+                        className={`animate-rise rounded-lg border bg-canvas p-5 transition ${
+                          overdue ? "border-coral/30" : "border-hairline"
+                        } ${task.completed ? "opacity-60" : ""}`}
                         style={{ animationDelay: `${index * 40}ms` }}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
+                            {/* Complete toggle */}
                             <button
                               type="button"
-                              aria-label={
-                                task.completed ? "Mark incomplete" : "Mark complete"
-                              }
+                              aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
                               onClick={() => toggleComplete(task.id)}
-                              className={`mt-1 h-5 w-5 rounded-full border transition ${
+                              className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${
                                 task.completed
-                                  ? "border-accent-500 bg-accent-500"
-                                  : "border-mist-200 bg-white"
+                                  ? "border-coral bg-coral"
+                                  : "border-hairline bg-canvas hover:border-coral"
                               }`}
                             />
-                            <div>
-                              <h3
-                                className={`text-lg font-semibold text-ink-900 ${
-                                  task.completed ? "line-through text-ink-300" : ""
-                                }`}
-                              >
+                            <div className="min-w-0">
+                              <h3 className={`text-sm font-medium text-ink leading-snug ${
+                                task.completed ? "line-through text-ink-soft" : ""
+                              }`}>
                                 {task.title}
                               </h3>
-                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-300">
-                                <span>{formatDueLabel(task.dueAt)}</span>
-                                {overdue ? (
-                                  <span className="rounded-full bg-accent-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-600">
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-ink-soft">{formatDueLabel(task.dueAt)}</span>
+                                {overdue && !task.completed ? (
+                                  <span className="rounded-pill bg-coral/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-coral">
                                     Overdue
+                                  </span>
+                                ) : null}
+                                {task.pinned ? (
+                                  <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-ink-muted">
+                                    Pinned
                                   </span>
                                 ) : null}
                               </div>
                               {task.notes ? (
-                                <p className="mt-2 text-sm text-ink-500">
-                                  {preview}
-                                </p>
+                                <p className="mt-1.5 text-xs text-ink-muted leading-relaxed">{preview}</p>
                               ) : (
-                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-ink-300">
-                                  No notes
-                                </p>
+                                <p className="mt-1.5 text-[10px] uppercase tracking-[1px] text-ink-soft">No notes</p>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          {/* Action buttons */}
+                          <div className="flex shrink-0 items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => togglePin(task.id)}
-                              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                                task.pinned
-                                  ? "border-accent-500 text-accent-500"
-                                  : "border-mist-200 text-ink-500 hover:border-accent-500 hover:text-accent-500"
-                              }`}
+                              className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
                             >
-                              {task.pinned ? "Pinned" : "Pin"}
+                              {task.pinned ? "Unpin" : "Pin"}
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                isEditing ? cancelEdit() : startEdit(task)
-                              }
-                              className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                              onClick={() => isEditing ? cancelEdit() : startEdit(task)}
+                              className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
                             >
                               {isEditing ? "Cancel" : "Edit"}
                             </button>
@@ -446,69 +420,63 @@ export default function TaskApp() {
                               <button
                                 type="button"
                                 onClick={() => toggleNotes(task.id)}
-                                className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                                className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
                               >
-                                {isOpen ? "Hide notes" : "View notes"}
+                                {isOpen ? "Hide" : "Notes"}
                               </button>
                             ) : null}
                             <button
                               type="button"
                               onClick={() => removeTask(task.id)}
-                              className="rounded-full border border-transparent px-3 py-1 text-xs font-semibold text-ink-300 transition hover:border-mist-200 hover:text-ink-500"
+                              className="rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-ink-soft transition hover:border-hairline hover:text-ink-muted"
                             >
                               Delete
                             </button>
                           </div>
                         </div>
+
+                        {/* Edit form */}
                         {isEditing ? (
-                          <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-4">
+                          <div className="animate-fade mt-4 rounded-md border border-hairline bg-surface-card p-4">
                             <div className="flex flex-col gap-3">
-                              <div className="flex flex-col gap-2">
-                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
-                                  Title
-                                </label>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Title</label>
                                 <input
                                   value={editTitle}
-                                  onChange={(event) => setEditTitle(event.target.value)}
-                                  className="rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                                  onChange={(e) => setEditTitle(e.target.value)}
+                                  className="rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink outline-none transition focus:border-coral"
                                 />
                               </div>
-                              <div className="flex flex-col gap-2">
-                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
-                                  Notes
-                                </label>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Notes</label>
                                 <MarkdownEditor
                                   value={editNotes}
                                   onChange={setEditNotes}
-                                  placeholder="Markdown supported. Supports headings, task lists, tables, YAML front matter, and autolinks."
-                                  minHeight={140}
+                                  placeholder="Markdown supported…"
+                                  minHeight={120}
                                 />
                               </div>
-                              <div className="flex flex-col gap-2">
-                                <label className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-300">
-                                  Due date & time
-                                </label>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Due date & time</label>
                                 <input
                                   type="datetime-local"
                                   value={editDueAt}
-                                  onChange={(event) =>
-                                    setEditDueAt(event.target.value)
-                                  }
-                                  className="rounded-2xl border border-mist-200 bg-white px-4 py-2 text-sm text-ink-700 shadow-sm outline-none transition focus:border-accent-500"
+                                  onChange={(e) => setEditDueAt(e.target.value)}
+                                  className="rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink outline-none transition focus:border-coral"
                                 />
                               </div>
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
                                   onClick={() => saveEdit(task.id)}
-                                  className="rounded-full bg-accent-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent-600"
+                                  className="rounded-md bg-coral px-4 py-1.5 text-xs font-medium text-white transition hover:bg-coral-active"
                                 >
                                   Save
                                 </button>
                                 <button
                                   type="button"
                                   onClick={cancelEdit}
-                                  className="rounded-full border border-mist-200 px-4 py-2 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
+                                  className="rounded-md border border-hairline px-4 py-1.5 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
                                 >
                                   Cancel
                                 </button>
@@ -516,26 +484,27 @@ export default function TaskApp() {
                             </div>
                           </div>
                         ) : null}
-                {task.notes && isOpen ? (
-                  <div className="animate-fade mt-4 rounded-2xl border border-mist-200 bg-mist-50 px-4 py-3">
-                    <RenderedMarkdown source={task.notes} />
-                    {extractMarkdownUrls(task.notes).length > 0 ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {extractMarkdownUrls(task.notes).map((url) => (
-                          <a
-                            key={url}
-                            href={url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-full border border-mist-200 bg-white px-3 py-1 text-xs font-semibold text-ink-500 transition hover:border-accent-500 hover:text-accent-500"
-                          >
-                            {url}
-                          </a>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
+                        {/* Notes expanded */}
+                        {task.notes && isOpen ? (
+                          <div className="animate-fade mt-4 rounded-md border border-hairline bg-surface-card px-4 py-3">
+                            <RenderedMarkdown source={task.notes} />
+                            {extractMarkdownUrls(task.notes).length > 0 ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {extractMarkdownUrls(task.notes).map((url) => (
+                                  <a
+                                    key={url}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-coral transition hover:border-coral"
+                                  >
+                                    {url}
+                                  </a>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })
