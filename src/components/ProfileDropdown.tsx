@@ -45,7 +45,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
       style={{ backgroundColor: "rgba(20,20,19,0.45)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="animate-fade w-full max-w-md rounded-xl border border-hairline bg-canvas shadow-subtle">
+      <div className="animate-fade w-full max-w-md rounded-xl border border-hairline bg-canvas shadow-subtle flex flex-col max-h-[90vh]">
         {children}
       </div>
     </div>
@@ -198,7 +198,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
           </svg>
         </button>
       </div>
-      <div className="px-6 py-5 flex flex-col gap-6">
+      <div className="overflow-y-auto px-6 py-5 flex flex-col gap-6">
         {/* Theme */}
         <div>
           <p className="text-xs font-medium uppercase tracking-[1.2px] text-ink-muted mb-3">Appearance</p>
