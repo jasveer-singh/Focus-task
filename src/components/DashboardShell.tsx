@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import CalendarSyncPanel from "@/components/CalendarSyncPanel";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import ProjectsApp from "@/components/ProjectsApp";
 import TaskApp from "@/components/TaskApp";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 
@@ -154,7 +155,7 @@ export default function DashboardShell({ email, name }: { email?: string | null;
 
         {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" /> : null}
         {activeModule === "tasks"     ? <TaskApp /> : null}
-        {activeModule === "projects"  ? <ComingSoon label="Projects" description="Track work across milestones. Project boards and timelines are coming soon." /> : null}
+        {activeModule === "projects"  ? <ProjectsApp /> : null}
         {activeModule === "agents"    ? <ComingSoon label="Agents"   description="Automated background workers that run tasks on your behalf. Coming soon." /> : null}
         {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas"     /> : null}
         {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback"  /> : null}

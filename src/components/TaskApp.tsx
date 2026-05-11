@@ -16,9 +16,13 @@ type Task = {
   pinned: boolean;
   dueAt: string | null;
   createdAt: number;
+  projectId?: string | null;
 };
 
-const STORAGE_KEY = "focus-tasks-v1";
+type Project = { id: string; title: string };
+
+const STORAGE_KEY   = "focus-tasks-v1";
+const PROJECTS_KEY  = "suru-projects-v1";
 
 function buildId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -48,6 +52,7 @@ export default function TaskApp() {
   // taskId waiting for "pick new time" edit — set when app opens from a notification action
   const [pendingPickTimeId, setPendingPickTimeId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Handle notification action buttons: Done / Snooze 1hr / Pick new time
   useTaskActions((taskId) => {
@@ -64,13 +69,9 @@ export default function TaskApp() {
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Task[];
-        setTasks(parsed);
-      } catch {
-        setTasks([]);
-      }
+      try { setTasks(JSON.parse(stored) as Task[]); } catch { setTasks([]); }
     }
+    try { setProjects(JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]")); } catch { setProjects([]); }
     setHasHydrated(true);
   }, []);
 
@@ -441,6 +442,14 @@ export default function TaskApp() {
                                     Pinned
                                   </span>
                                 ) : null}
+                                {task.projectId ? (() => {
+                                  const proj = projects.find(p => p.id === task.projectId);
+                                  return proj ? (
+                                    <span className="rounded-pill border border-coral/30 px-2 py-0.5 text-[10px] font-medium text-coral/80">
+                                      {proj.title}
+                                    </span>
+                                  ) : null;
+                                })() : null}
                               </div>
                               {task.notes ? (
                                 <p className="mt-1.5 text-xs text-ink-muted leading-relaxed">{preview}</p>
