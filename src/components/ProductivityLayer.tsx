@@ -83,9 +83,13 @@ function isTaskOverdue(task: LocalTask) {
 }
 
 export default function ProductivityLayer({
-  activeModule
+  activeModule,
+  visibleAccountIds: _visibleAccountIds = [],
+  activeAccountId: _activeAccountId = "",
 }: {
   activeModule: ProductivityModule;
+  visibleAccountIds?: string[];
+  activeAccountId?: string;
 }) {
   const [tasks, setTasks] = useState<LocalTask[]>([]);
   const [followups, setFollowups] = useState<Record<string, FollowUpState>>({});

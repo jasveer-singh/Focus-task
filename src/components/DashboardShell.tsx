@@ -7,18 +7,20 @@ import ProductivityLayer from "@/components/ProductivityLayer";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import ProjectsApp from "@/components/ProjectsApp";
 import TaskApp from "@/components/TaskApp";
+import { AccountProvider, useAccounts } from "@/context/AccountContext";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
+import { TYPE_META } from "@/lib/accounts";
 
 type ModuleKey = "reminders" | "tasks" | "projects" | "agents" | "ideas" | "feedback" | "calendar";
 
 const MODULES: Array<{ key: ModuleKey; label: string; description: string; dividerAfter?: boolean }> = [
-  { key: "reminders", label: "Reminders", description: "Due queue and follow-ups"    },
-  { key: "tasks",     label: "Tasks",     description: "Task capture and execution"  },
+  { key: "reminders", label: "Reminders", description: "Due queue and follow-ups"     },
+  { key: "tasks",     label: "Tasks",     description: "Task capture and execution"   },
   { key: "projects",  label: "Projects",  description: "Track work across milestones", dividerAfter: true },
   { key: "agents",    label: "Agents",    description: "Automated background workers", dividerAfter: true },
-  { key: "ideas",     label: "Ideas",     description: "Inbox for notes and thoughts" },
-  { key: "feedback",  label: "Feedback",  description: "Captured product feedback",   dividerAfter: true },
-  { key: "calendar",  label: "Calendar",  description: "Google Calendar sync"         },
+  { key: "ideas",     label: "Ideas",     description: "Inbox for notes and thoughts"  },
+  { key: "feedback",  label: "Feedback",  description: "Captured product feedback",    dividerAfter: true },
+  { key: "calendar",  label: "Calendar",  description: "Google Calendar sync"          },
 ];
 
 function ComingSoon({ label, description }: { label: string; description: string }) {
@@ -41,8 +43,38 @@ function ComingSoon({ label, description }: { label: string; description: string
   );
 }
 
-export default function DashboardShell({ email, name }: { email?: string | null; name?: string | null }) {
+// ── Active account pills shown below the sidebar nav ─────────────────────────
+
+function AccountPills() {
+  const { accounts, visibleIds } = useAccounts();
+  if (accounts.length <= 1) return null;
+
+  return (
+    <div className="px-3 pb-3 flex flex-wrap gap-1.5">
+      {accounts.map((acct) => {
+        const visible = visibleIds.includes(acct.id);
+        const meta = TYPE_META[acct.type];
+        return (
+          <span
+            key={acct.id}
+            className={`flex items-center gap-1 rounded-pill px-2 py-0.5 text-[10px] font-medium transition ${
+              visible ? "bg-white/20 text-white" : "bg-white/5 text-white/30"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${visible ? "bg-white" : "bg-white/30"}`} />
+            {acct.name.split(" ")[0]} · {meta.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Inner shell (needs AccountContext) ────────────────────────────────────────
+
+function Shell({ email, name }: { email?: string | null; name?: string | null }) {
   const [activeModule, setActiveModule] = useState<ModuleKey>("reminders");
+  const { visibleIds, activeAccountId } = useAccounts();
   useNotificationScheduler();
 
   const activeMeta = useMemo(
@@ -53,9 +85,10 @@ export default function DashboardShell({ email, name }: { email?: string | null;
   return (
     <div className="mx-auto flex w-full max-w-[1400px] min-h-screen gap-0 px-0">
 
-      {/* ── Sidebar (coral CTA shade) ────────────────────────────────────── */}
+      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col lg:flex"
         style={{ backgroundColor: "#b8694e" }}>
+
         {/* Brand */}
         <div className="px-4 pt-6 pb-4 border-b border-white/10">
           <div className="flex items-center gap-2 mb-4">
@@ -65,12 +98,11 @@ export default function DashboardShell({ email, name }: { email?: string | null;
             </svg>
             <span className="font-display text-base font-normal text-white">Suru</span>
           </div>
-          {/* Profile dropdown trigger */}
           <ProfileDropdown name={name} email={email} />
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4">
+        <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4 overflow-y-auto">
           {MODULES.map((mod) => {
             const active = mod.key === activeModule;
             return (
@@ -88,7 +120,6 @@ export default function DashboardShell({ email, name }: { email?: string | null;
                     <p className="text-sm font-medium leading-none">{mod.label}</p>
                     <p className="mt-1 text-xs text-white/50 leading-none">{mod.description}</p>
                   </button>
-                  {/* "+" button — visible on hover */}
                   <button
                     type="button"
                     aria-label={`New item in ${mod.label}`}
@@ -103,14 +134,14 @@ export default function DashboardShell({ email, name }: { email?: string | null;
                     </svg>
                   </button>
                 </div>
-                {mod.dividerAfter && (
-                  <div className="my-2 mx-1 border-t border-white/10" />
-                )}
+                {mod.dividerAfter && <div className="my-2 mx-1 border-t border-white/10" />}
               </div>
             );
           })}
         </nav>
 
+        {/* Active account pills */}
+        <AccountPills />
       </aside>
 
       {/* ── Mobile top bar ────────────────────────────────────────────────── */}
@@ -129,9 +160,7 @@ export default function DashboardShell({ email, name }: { email?: string | null;
                 type="button"
                 onClick={() => setActiveModule(mod.key)}
                 className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-surface-dark-elevated text-on-dark"
-                    : "text-on-dark-soft"
+                  active ? "bg-surface-dark-elevated text-on-dark" : "text-on-dark-soft"
                 }`}
               >
                 {mod.label}
@@ -141,26 +170,31 @@ export default function DashboardShell({ email, name }: { email?: string | null;
         </div>
       </div>
 
-      {/* ── Main content (cream canvas) ───────────────────────────────────── */}
+      {/* ── Main content ──────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 bg-canvas pt-12 lg:pt-0">
-        {/* Section header */}
         <div className="border-b border-hairline px-8 py-5 lg:px-10">
-          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">
-            {activeMeta.label}
-          </p>
-          <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">
-            {activeMeta.description}
-          </h2>
+          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{activeMeta.label}</p>
+          <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">{activeMeta.description}</h2>
         </div>
 
-        {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" /> : null}
-        {activeModule === "tasks"     ? <TaskApp /> : null}
-        {activeModule === "projects"  ? <ProjectsApp /> : null}
-        {activeModule === "agents"    ? <ComingSoon label="Agents"   description="Automated background workers that run tasks on your behalf. Coming soon." /> : null}
-        {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas"     /> : null}
-        {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback"  /> : null}
+        {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "tasks"     ? <TaskApp visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "projects"  ? <ProjectsApp visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "agents"    ? <ComingSoon label="Agents" description="Automated background workers that run tasks on your behalf. Coming soon." /> : null}
+        {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
         {activeModule === "calendar"  ? <CalendarSyncPanel /> : null}
       </main>
     </div>
+  );
+}
+
+// ── Export (wraps Shell in AccountProvider) ───────────────────────────────────
+
+export default function DashboardShell({ email, name }: { email?: string | null; name?: string | null }) {
+  return (
+    <AccountProvider primaryEmail={email} primaryName={name}>
+      <Shell email={email} name={name} />
+    </AccountProvider>
   );
 }

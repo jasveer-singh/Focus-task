@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
-import { buildId, PROJECTS_KEY, PROJECT_STATUS_OPTIONS, STATUS_META, TASKS_KEY } from "@/lib/types";
+import { buildId, PROJECTS_KEY, STATUS_META, TASKS_KEY } from "@/lib/types";
 import type { Project, ProjectStatus, Task } from "@/lib/types";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -521,7 +521,13 @@ function ProjectDetail({ project, tasks, onBack, onUpdateProject, onDeleteProjec
 
 // ── Root component ─────────────────────────────────────────────────────────────
 
-export default function ProjectsApp() {
+export default function ProjectsApp({
+  visibleAccountIds = [],
+  activeAccountId = "",
+}: {
+  visibleAccountIds?: string[];
+  activeAccountId?: string;
+}) {
   const [projects, setProjects]     = useState<Project[]>([]);
   const [tasks, setTasks]           = useState<Task[]>([]);
   const [hasHydrated, setHydrated]  = useState(false);
@@ -557,7 +563,7 @@ export default function ProjectsApp() {
 
   // Project CRUD
   function createProject(title: string, description: string, status: ProjectStatus) {
-    const p: Project = { id: buildId(), title, description, status, createdAt: Date.now() };
+    const p: Project = { id: buildId(), title, description, status, createdAt: Date.now(), accountId: activeAccountId || undefined } as Project & { accountId?: string };
     setProjects((prev) => [p, ...prev]);
   }
 

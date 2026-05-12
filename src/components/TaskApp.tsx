@@ -17,6 +17,7 @@ type Task = {
   dueAt: string | null;
   createdAt: number;
   projectId?: string | null;
+  accountId?: string | null;
 };
 
 type Project = { id: string; title: string };
@@ -37,7 +38,13 @@ function clampPreview(text: string, limit = 140) {
   return `${cleaned.slice(0, limit)}…`;
 }
 
-export default function TaskApp() {
+export default function TaskApp({
+  visibleAccountIds = [],
+  activeAccountId = "",
+}: {
+  visibleAccountIds?: string[];
+  activeAccountId?: string;
+}) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [title, setTitle] = useState("");
@@ -119,13 +126,17 @@ export default function TaskApp() {
   }, [hasHydrated, tasks]);
 
   const sortedTasks = useMemo(() => {
-    return [...tasks].sort((a, b) => {
+    const visible = tasks.filter((t) =>
+      // Show if no accountId (legacy), or accountId is in the visible list
+      !t.accountId || visibleAccountIds.length === 0 || visibleAccountIds.includes(t.accountId)
+    );
+    return visible.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.createdAt - a.createdAt;
     });
-  }, [tasks]);
+  }, [tasks, visibleAccountIds]);
 
-  const completedCount = tasks.filter((task) => task.completed).length;
+  const completedCount = sortedTasks.filter((task) => task.completed).length;
 
   function closeCreateModal() {
     setShowCreateModal(false);
@@ -144,7 +155,8 @@ export default function TaskApp() {
       completed: false,
       pinned: false,
       dueAt: resolvedDueAt,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      accountId: activeAccountId || undefined,
     };
     setTasks((prev) => [newTask, ...prev]);
     if (resolvedDueAt) {
@@ -447,6 +459,14 @@ export default function TaskApp() {
                                   return proj ? (
                                     <span className="rounded-pill border border-coral/30 px-2 py-0.5 text-[10px] font-medium text-coral/80">
                                       {proj.title}
+                                    </span>
+                                  ) : null;
+                                })() : null}
+                                {task.accountId && visibleAccountIds.length > 1 ? (() => {
+                                  const acct = (JSON.parse(localStorage.getItem("suru-accounts-v1") || "[]") as Array<{id:string;name:string;type:string}>).find(a => a.id === task.accountId);
+                                  return acct ? (
+                                    <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium text-ink-muted">
+                                      {acct.type === "personal" ? "Personal" : "Work"}
                                     </span>
                                   ) : null;
                                 })() : null}
