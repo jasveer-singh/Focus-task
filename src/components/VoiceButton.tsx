@@ -14,7 +14,7 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   const [transcript, setTranscript] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const recognitionRef = useRef<unknown>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
 
   const isSupported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
@@ -22,14 +22,21 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   const startListening = useCallback(() => {
     if (!isSupported) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
-    const SRClass = w.SpeechRecognition || w.webkitSpeechRecognition;
+    const w = window as Record<string, unknown>;
+    const SRClass = (w.SpeechRecognition || w.webkitSpeechRecognition) as (new () => {
+      lang: string;
+      interimResults: boolean;
+      maxAlternatives: number;
+      start: () => void;
+      stop: () => void;
+      onresult: ((e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => void) | null;
+      onerror: (() => void) | null;
+      onend: (() => void) | null;
+    }) | undefined;
 
     if (!SRClass) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recognition: any = new SRClass();
+    const recognition = new SRClass();
     recognition.lang = "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -63,7 +70,7 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
       }
     }
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
       setState("processing");
@@ -83,7 +90,7 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   }, [isSupported, state, onCreated]);
 
   function stop() {
-    (recognitionRef.current as SpeechRecognition | null)?.stop();
+    recognitionRef.current?.stop();
     setState("idle");
   }
 
