@@ -22,15 +22,13 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   const startListening = useCallback(() => {
     if (!isSupported) return;
 
-    const SpeechRecognition =
-      (window as unknown as { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition })
-        .SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognition })
-        .webkitSpeechRecognition;
+    type SRConstructor = new () => SpeechRecognition;
+    const w = window as unknown as { SpeechRecognition?: SRConstructor; webkitSpeechRecognition?: SRConstructor };
+    const SRClass = w.SpeechRecognition || w.webkitSpeechRecognition;
 
-    if (!SpeechRecognition) return;
+    if (!SRClass) return;
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SRClass();
     recognition.lang = "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
