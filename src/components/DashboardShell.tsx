@@ -178,8 +178,8 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
         </div>
 
         {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
-        {activeModule === "tasks"     ? <TaskApp visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
-        {activeModule === "projects"  ? <ProjectsApp visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "tasks"     ? <TaskApp /> : null}
+        {activeModule === "projects"  ? <ProjectsApp /> : null}
         {activeModule === "agents"    ? <ComingSoon label="Agents" description="Automated background workers that run tasks on your behalf. Coming soon." /> : null}
         {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
         {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}

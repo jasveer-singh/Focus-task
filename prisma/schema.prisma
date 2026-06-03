@@ -20,6 +20,10 @@ model User {
   accounts              Account[]
   sessions              Session[]
   calendarEvents        CalendarEvent[]
+  projects              Project[]
+  tasks                 Task[]
+  ideas                 Idea[]
+  feedbackItems         FeedbackItem[]
   pushSubscriptions     PushSubscription[]
   scheduledNotifications ScheduledNotification[]
 }
@@ -86,6 +90,70 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String   @default("")
+  status      String   @default("planning")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([userId])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  userId    String
+  projectId String?
+  title     String
+  notes     String    @default("")
+  completed Boolean   @default(false)
+  pinned    Boolean   @default(false)
+  dueAt     DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+model Idea {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  notes     String   @default("")
+  sourceUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FeedbackItem {
+  id         String    @id @default(cuid())
+  userId     String
+  from       String
+  message    String
+  receivedAt DateTime  @default(now())
+  dueAt      DateTime?
+  status     String    @default("new")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model CalendarEvent {

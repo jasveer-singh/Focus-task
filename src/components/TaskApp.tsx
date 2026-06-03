@@ -7,30 +7,8 @@ import RenderedMarkdown from "@/components/RenderedMarkdown";
 import { extractMarkdownUrls } from "@/lib/markdown";
 import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
 import { useTaskActions } from "@/hooks/useTaskActions";
-
-type Task = {
-  id: string;
-  title: string;
-  notes: string;
-  completed: boolean;
-  pinned: boolean;
-  dueAt: string | null;
-  createdAt: number;
-  projectId?: string | null;
-  accountId?: string | null;
-};
-
-type Project = { id: string; title: string };
-
-const STORAGE_KEY   = "focus-tasks-v1";
-const PROJECTS_KEY  = "suru-projects-v1";
-
-function buildId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `task_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
+import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
+import type { Task } from "@/lib/types";
 
 function clampPreview(text: string, limit = 140) {
   const cleaned = text.trim();
@@ -38,15 +16,9 @@ function clampPreview(text: string, limit = 140) {
   return `${cleaned.slice(0, limit)}…`;
 }
 
-export default function TaskApp({
-  visibleAccountIds = [],
-  activeAccountId = "",
-}: {
-  visibleAccountIds?: string[];
-  activeAccountId?: string;
-}) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [hasHydrated, setHasHydrated] = useState(false);
+export default function TaskApp() {
+  const { tasks, projects, loading, createTask, updateTask, deleteTask } = useTasksAndProjects();
+
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -55,18 +27,11 @@ export default function TaskApp({
   const [editNotes, setEditNotes] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [editDueAt, setEditDueAt] = useState("");
-  const ignoreNextStorageSyncRef = useRef(false);
-  // taskId waiting for "pick new time" edit — set when app opens from a notification action
   const [pendingPickTimeId, setPendingPickTimeId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
 
-  // Handle notification action buttons: Done / Snooze 1hr / Pick new time
-  useTaskActions((taskId) => {
-    setPendingPickTimeId(taskId);
-  });
+  useTaskActions((taskId) => setPendingPickTimeId(taskId));
 
-  // Open create modal from sidebar "+" button
   useEffect(() => {
     const handler = () => setShowCreateModal(true);
     window.addEventListener("focus-new-task", handler);
@@ -74,69 +39,23 @@ export default function TaskApp({
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try { setTasks(JSON.parse(stored) as Task[]); } catch { setTasks([]); }
-    }
-    try { setProjects(JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]")); } catch { setProjects([]); }
-    setHasHydrated(true);
-  }, []);
-
-  // Once tasks load, open edit form if "pick new time" was requested from a notification
-  useEffect(() => {
-    if (!hasHydrated || !pendingPickTimeId) return;
+    if (loading || !pendingPickTimeId) return;
     const task = tasks.find((t) => t.id === pendingPickTimeId);
     if (task) {
       startEdit(task);
       setPendingPickTimeId(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, pendingPickTimeId]);
-
-  useEffect(() => {
-    function reloadFromStorage() {
-      if (ignoreNextStorageSyncRef.current) {
-        ignoreNextStorageSyncRef.current = false;
-        return;
-      }
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) {
-        setTasks([]);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(stored) as Task[];
-        setTasks(parsed);
-      } catch {
-        setTasks([]);
-      }
-    }
-
-    window.addEventListener("focus-tasks-updated", reloadFromStorage);
-    return () => {
-      window.removeEventListener("focus-tasks-updated", reloadFromStorage);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    ignoreNextStorageSyncRef.current = true;
-    window.dispatchEvent(new Event("focus-tasks-updated"));
-  }, [hasHydrated, tasks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, pendingPickTimeId]);
 
   const sortedTasks = useMemo(() => {
-    const visible = tasks.filter((t) =>
-      // Show if no accountId (legacy), or accountId is in the visible list
-      !t.accountId || visibleAccountIds.length === 0 || visibleAccountIds.includes(t.accountId)
-    );
-    return visible.sort((a, b) => {
+    return [...tasks].sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.createdAt - a.createdAt;
     });
-  }, [tasks, visibleAccountIds]);
+  }, [tasks]);
 
-  const completedCount = sortedTasks.filter((task) => task.completed).length;
+  const completedCount = tasks.filter((t) => t.completed).length;
 
   function closeCreateModal() {
     setShowCreateModal(false);
@@ -145,60 +64,14 @@ export default function TaskApp({
     setDueAt("");
   }
 
-  function addTask() {
+  async function addTask() {
     if (!title.trim()) return;
     const resolvedDueAt = dueAt ? new Date(dueAt).toISOString() : null;
-    const newTask: Task = {
-      id: buildId(),
-      title: title.trim(),
-      notes: notes.trim(),
-      completed: false,
-      pinned: false,
-      dueAt: resolvedDueAt,
-      createdAt: Date.now(),
-      accountId: activeAccountId || undefined,
-    };
-    setTasks((prev) => [newTask, ...prev]);
+    const task = await createTask({ title: title.trim(), notes: notes.trim(), dueAt: resolvedDueAt });
     if (resolvedDueAt) {
-      scheduleNotifications({
-        sourceId: newTask.id,
-        sourceType: "task",
-        title: newTask.title,
-        dueAt: resolvedDueAt,
-        reminderWindows: getReminderWindows()
-      });
+      scheduleNotifications({ sourceId: task.id, sourceType: "task", title: task.title, dueAt: resolvedDueAt, reminderWindows: getReminderWindows() });
     }
     closeCreateModal();
-  }
-
-  function toggleComplete(id: string) {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
-  }
-
-  function removeTask(id: string) {
-    setTasks((prev) => prev.filter((task) => task.id !== id));
-    setExpanded((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    cancelNotifications(id);
-  }
-
-  function toggleNotes(id: string) {
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  function togglePin(id: string) {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, pinned: !task.pinned } : task
-      )
-    );
   }
 
   function startEdit(task: Task) {
@@ -215,41 +88,29 @@ export default function TaskApp({
     setEditDueAt("");
   }
 
-  function saveEdit(id: string) {
+  async function saveEdit(id: string) {
     if (!editTitle.trim()) return;
     const resolvedDueAt = editDueAt ? new Date(editDueAt).toISOString() : null;
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? { ...task, title: editTitle.trim(), notes: editNotes.trim(), dueAt: resolvedDueAt }
-          : task
-      )
-    );
-    // Cancel old notifications, then reschedule if there's a due date
+    await updateTask(id, { title: editTitle.trim(), notes: editNotes.trim(), dueAt: resolvedDueAt });
     cancelNotifications(id).then(() => {
       if (resolvedDueAt) {
-        scheduleNotifications({
-          sourceId: id,
-          sourceType: "task",
-          title: editTitle.trim(),
-          dueAt: resolvedDueAt,
-          reminderWindows: getReminderWindows()
-        });
+        scheduleNotifications({ sourceId: id, sourceType: "task", title: editTitle.trim(), dueAt: resolvedDueAt, reminderWindows: getReminderWindows() });
       }
     });
     cancelEdit();
+  }
+
+  async function removeTask(id: string) {
+    await deleteTask(id);
+    setExpanded((prev) => { const next = { ...prev }; delete next[id]; return next; });
+    cancelNotifications(id);
   }
 
   function formatDueLabel(value: string | null) {
     if (!value) return "No due date";
     const dt = new Date(value);
     if (Number.isNaN(dt.getTime())) return "No due date";
-    return dt.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    });
+    return dt.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   }
 
   function isOverdue(value: string | null) {
@@ -274,18 +135,22 @@ export default function TaskApp({
     return "month";
   }
 
-  const sectionedTasks = useMemo(() => {
-    const base = sortedTasks;
-    return {
-      today: base.filter((task) => sectionFor(task) === "today"),
-      week: base.filter((task) => sectionFor(task) === "week"),
-      month: base.filter((task) => sectionFor(task) === "month")
-    };
-  }, [sortedTasks]);
+  const sectionedTasks = useMemo(() => ({
+    today: sortedTasks.filter((t) => sectionFor(t) === "today"),
+    week:  sortedTasks.filter((t) => sectionFor(t) === "week"),
+    month: sortedTasks.filter((t) => sectionFor(t) === "month"),
+  }), [sortedTasks]);
+
+  if (loading) {
+    return (
+      <section className="flex w-full flex-col gap-8 px-8 py-10 lg:px-10">
+        <div className="flex items-center justify-center py-20 text-sm text-ink-soft">Loading tasks…</div>
+      </section>
+    );
+  }
 
   return (
     <>
-    {/* ── Create task modal ──────────────────────────────────────── */}
     {showCreateModal && (
       <div
         className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
@@ -301,10 +166,7 @@ export default function TaskApp({
               </svg>
             </button>
           </div>
-          <form
-            className="flex flex-col gap-4 px-6 py-5"
-            onSubmit={(e) => { e.preventDefault(); addTask(); }}
-          >
+          <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); addTask(); }}>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-ink-muted">Task title</label>
               <input
@@ -317,12 +179,7 @@ export default function TaskApp({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-ink-muted">Notes (optional)</label>
-              <MarkdownEditor
-                value={notes}
-                onChange={setNotes}
-                placeholder="Markdown supported…"
-                minHeight={120}
-              />
+              <MarkdownEditor value={notes} onChange={setNotes} placeholder="Markdown supported…" minHeight={120} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-ink-muted">Due date & time</label>
@@ -334,21 +191,10 @@ export default function TaskApp({
               />
             </div>
             <div className="flex items-center justify-between border-t border-hairline pt-4">
-              <p className="text-xs text-ink-soft">Stored locally in your browser.</p>
+              <p className="text-xs text-ink-soft">Saved to your account.</p>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={closeCreateModal}
-                  className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active"
-                >
-                  Add task
-                </button>
+                <button type="button" onClick={closeCreateModal} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral">Cancel</button>
+                <button type="submit" className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active">Add task</button>
               </div>
             </div>
           </form>
@@ -357,7 +203,6 @@ export default function TaskApp({
     )}
 
     <section className="flex w-full flex-col gap-8 px-8 py-10 lg:px-10">
-      {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-8">
         <div>
           <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Your workspace</p>
@@ -385,211 +230,147 @@ export default function TaskApp({
         </div>
       </header>
 
-      {/* ── Task list ─────────────────────────────────────────── */}
       <div className="flex flex-col gap-6">
         <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Created tasks</p>
-          {sortedTasks.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
-              No tasks yet. Add one to get started.
-            </div>
-          ) : (
-            ([
-              { key: "today", label: "Due today",      items: sectionedTasks.today },
-              { key: "week",  label: "Due this week",  items: sectionedTasks.week  },
-              { key: "month", label: "Due this month", items: sectionedTasks.month }
-            ] as const).map((section) => (
-              <div key={section.key} className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">
-                    {section.label}
-                  </h2>
-                  <span className="text-xs text-ink-soft">{section.items.length} tasks</span>
-                </div>
-                {section.items.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-hairline-soft p-5 text-center text-xs text-ink-soft">
-                    Nothing here yet.
-                  </div>
-                ) : (
-                  section.items.map((task, index) => {
-                    const isOpen    = expanded[task.id];
-                    const isEditing = editingId === task.id;
-                    const preview   = clampPreview(task.notes);
-                    const overdue   = isOverdue(task.dueAt);
-                    return (
-                      <article
-                        key={task.id}
-                        className={`animate-rise rounded-lg border bg-canvas p-5 transition ${
-                          overdue ? "border-coral/30" : "border-hairline"
-                        } ${task.completed ? "opacity-60" : ""}`}
-                        style={{ animationDelay: `${index * 40}ms` }}
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div className="flex items-start gap-3">
-                            {/* Complete toggle */}
-                            <button
-                              type="button"
-                              aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
-                              onClick={() => toggleComplete(task.id)}
-                              className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${
-                                task.completed
-                                  ? "border-coral bg-coral"
-                                  : "border-hairline bg-canvas hover:border-coral"
-                              }`}
-                            />
-                            <div className="min-w-0">
-                              <h3 className={`text-sm font-medium text-ink leading-snug ${
-                                task.completed ? "line-through text-ink-soft" : ""
-                              }`}>
-                                {task.title}
-                              </h3>
-                              <div className="mt-1 flex flex-wrap items-center gap-2">
-                                <span className="text-xs text-ink-soft">{formatDueLabel(task.dueAt)}</span>
-                                {overdue && !task.completed ? (
-                                  <span className="rounded-pill bg-coral/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-coral">
-                                    Overdue
-                                  </span>
-                                ) : null}
-                                {task.pinned ? (
-                                  <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-ink-muted">
-                                    Pinned
-                                  </span>
-                                ) : null}
-                                {task.projectId ? (() => {
-                                  const proj = projects.find(p => p.id === task.projectId);
-                                  return proj ? (
-                                    <span className="rounded-pill border border-coral/30 px-2 py-0.5 text-[10px] font-medium text-coral/80">
-                                      {proj.title}
-                                    </span>
-                                  ) : null;
-                                })() : null}
-                                {task.accountId && visibleAccountIds.length > 1 ? (() => {
-                                  const acct = (JSON.parse(localStorage.getItem("suru-accounts-v1") || "[]") as Array<{id:string;name:string;type:string}>).find(a => a.id === task.accountId);
-                                  return acct ? (
-                                    <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium text-ink-muted">
-                                      {acct.type === "personal" ? "Personal" : "Work"}
-                                    </span>
-                                  ) : null;
-                                })() : null}
-                              </div>
-                              {task.notes ? (
-                                <p className="mt-1.5 text-xs text-ink-muted leading-relaxed">{preview}</p>
-                              ) : (
-                                <p className="mt-1.5 text-[10px] uppercase tracking-[1px] text-ink-soft">No notes</p>
+        {sortedTasks.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
+            No tasks yet. Add one to get started.
+          </div>
+        ) : (
+          ([
+            { key: "today", label: "Due today",      items: sectionedTasks.today },
+            { key: "week",  label: "Due this week",  items: sectionedTasks.week  },
+            { key: "month", label: "Due this month", items: sectionedTasks.month },
+          ] as const).map((section) => (
+            <div key={section.key} className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{section.label}</h2>
+                <span className="text-xs text-ink-soft">{section.items.length} tasks</span>
+              </div>
+              {section.items.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-hairline-soft p-5 text-center text-xs text-ink-soft">Nothing here yet.</div>
+              ) : (
+                section.items.map((task, index) => {
+                  const isOpen    = expanded[task.id];
+                  const isEditing = editingId === task.id;
+                  const preview   = clampPreview(task.notes);
+                  const overdue   = isOverdue(task.dueAt);
+                  return (
+                    <article
+                      key={task.id}
+                      className={`animate-rise rounded-lg border bg-canvas p-5 transition ${overdue ? "border-coral/30" : "border-hairline"} ${task.completed ? "opacity-60" : ""}`}
+                      style={{ animationDelay: `${index * 40}ms` }}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
+                            onClick={() => updateTask(task.id, { completed: !task.completed })}
+                            className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline bg-canvas hover:border-coral"}`}
+                          />
+                          <div className="min-w-0">
+                            <h3 className={`text-sm font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>
+                              {task.title}
+                            </h3>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <span className="text-xs text-ink-soft">{formatDueLabel(task.dueAt)}</span>
+                              {overdue && !task.completed && (
+                                <span className="rounded-pill bg-coral/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-coral">Overdue</span>
                               )}
+                              {task.pinned && (
+                                <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-ink-muted">Pinned</span>
+                              )}
+                              {task.projectId && (() => {
+                                const proj = projects.find((p) => p.id === task.projectId);
+                                return proj ? (
+                                  <span className="rounded-pill border border-coral/30 px-2 py-0.5 text-[10px] font-medium text-coral/80">{proj.title}</span>
+                                ) : null;
+                              })()}
                             </div>
-                          </div>
-                          {/* Action buttons */}
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => togglePin(task.id)}
-                              className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
-                            >
-                              {task.pinned ? "Unpin" : "Pin"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => isEditing ? cancelEdit() : startEdit(task)}
-                              className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
-                            >
-                              {isEditing ? "Cancel" : "Edit"}
-                            </button>
                             {task.notes ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleNotes(task.id)}
-                                className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
-                              >
-                                {isOpen ? "Hide" : "Notes"}
-                              </button>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() => removeTask(task.id)}
-                              className="rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-ink-soft transition hover:border-hairline hover:text-ink-muted"
-                            >
-                              Delete
-                            </button>
+                              <p className="mt-1.5 text-xs text-ink-muted leading-relaxed">{preview}</p>
+                            ) : (
+                              <p className="mt-1.5 text-[10px] uppercase tracking-[1px] text-ink-soft">No notes</p>
+                            )}
                           </div>
                         </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => updateTask(task.id, { pinned: !task.pinned })}
+                            className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
+                          >
+                            {task.pinned ? "Unpin" : "Pin"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => isEditing ? cancelEdit() : startEdit(task)}
+                            className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
+                          >
+                            {isEditing ? "Cancel" : "Edit"}
+                          </button>
+                          {task.notes && (
+                            <button
+                              type="button"
+                              onClick={() => setExpanded((prev) => ({ ...prev, [task.id]: !prev[task.id] }))}
+                              className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
+                            >
+                              {isOpen ? "Hide" : "Notes"}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeTask(task.id)}
+                            className="rounded-md border border-transparent px-2.5 py-1 text-xs font-medium text-ink-soft transition hover:border-hairline hover:text-ink-muted"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
 
-                        {/* Edit form */}
-                        {isEditing ? (
-                          <div className="animate-fade mt-4 rounded-md border border-hairline bg-surface-card p-4">
-                            <div className="flex flex-col gap-3">
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Title</label>
-                                <input
-                                  value={editTitle}
-                                  onChange={(e) => setEditTitle(e.target.value)}
-                                  className="rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink outline-none transition focus:border-coral"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Notes</label>
-                                <MarkdownEditor
-                                  value={editNotes}
-                                  onChange={setEditNotes}
-                                  placeholder="Markdown supported…"
-                                  minHeight={120}
-                                />
-                              </div>
-                              <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Due date & time</label>
-                                <input
-                                  type="datetime-local"
-                                  value={editDueAt}
-                                  onChange={(e) => setEditDueAt(e.target.value)}
-                                  className="rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink outline-none transition focus:border-coral"
-                                />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => saveEdit(task.id)}
-                                  className="rounded-md bg-coral px-4 py-1.5 text-xs font-medium text-white transition hover:bg-coral-active"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={cancelEdit}
-                                  className="rounded-md border border-hairline px-4 py-1.5 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
+                      {isEditing && (
+                        <div className="animate-fade mt-4 rounded-md border border-hairline bg-surface-card p-4">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Title</label>
+                              <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink outline-none transition focus:border-coral" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Notes</label>
+                              <MarkdownEditor value={editNotes} onChange={setEditNotes} placeholder="Markdown supported…" minHeight={120} />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                              <label className="text-xs font-medium uppercase tracking-[1px] text-ink-muted">Due date & time</label>
+                              <input type="datetime-local" value={editDueAt} onChange={(e) => setEditDueAt(e.target.value)} className="rounded-md border border-hairline bg-canvas px-3 py-2 text-sm text-ink outline-none transition focus:border-coral" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button type="button" onClick={() => saveEdit(task.id)} className="rounded-md bg-coral px-4 py-1.5 text-xs font-medium text-white transition hover:bg-coral-active">Save</button>
+                              <button type="button" onClick={cancelEdit} className="rounded-md border border-hairline px-4 py-1.5 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral">Cancel</button>
                             </div>
                           </div>
-                        ) : null}
-                        {/* Notes expanded */}
-                        {task.notes && isOpen ? (
-                          <div className="animate-fade mt-4 rounded-md border border-hairline bg-surface-card px-4 py-3">
-                            <RenderedMarkdown source={task.notes} />
-                            {extractMarkdownUrls(task.notes).length > 0 ? (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {extractMarkdownUrls(task.notes).map((url) => (
-                                  <a
-                                    key={url}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-coral transition hover:border-coral"
-                                  >
-                                    {url}
-                                  </a>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </article>
-                    );
-                  })
-                )}
-              </div>
-            ))
-          )}
+                        </div>
+                      )}
+
+                      {task.notes && isOpen && (
+                        <div className="animate-fade mt-4 rounded-md border border-hairline bg-surface-card px-4 py-3">
+                          <RenderedMarkdown source={task.notes} />
+                          {extractMarkdownUrls(task.notes).length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {extractMarkdownUrls(task.notes).map((url) => (
+                                <a key={url} href={url} target="_blank" rel="noreferrer" className="rounded-md border border-hairline px-2.5 py-1 text-xs font-medium text-coral transition hover:border-coral">{url}</a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          ))
+        )}
       </div>
     </section>
     </>
