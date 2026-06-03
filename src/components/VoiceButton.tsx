@@ -37,13 +37,13 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
         setTimeout(() => { setState("idle"); setResult(null); setTranscript(""); }, 4000);
       } else {
         setState("error");
-        setErrorMsg("Couldn't create item. Try again.");
-        setTimeout(() => setState("idle"), 3000);
+        setErrorMsg(data.error || "Couldn't create item. Try again.");
+        setTimeout(() => setState("idle"), 4000);
       }
-    } catch {
+    } catch (err) {
       setState("error");
-      setErrorMsg("Network error. Try again.");
-      setTimeout(() => setState("idle"), 3000);
+      setErrorMsg(err instanceof Error ? err.message : "Network error. Try again.");
+      setTimeout(() => setState("idle"), 4000);
     }
   }
 
