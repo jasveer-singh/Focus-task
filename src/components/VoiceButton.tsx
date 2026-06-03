@@ -22,17 +22,24 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   const startListening = useCallback(() => {
     if (!isSupported) return;
 
-    const w = window as Record<string, unknown>;
-    const SRClass = (w.SpeechRecognition || w.webkitSpeechRecognition) as (new () => {
-      lang: string;
-      interimResults: boolean;
-      maxAlternatives: number;
-      start: () => void;
-      stop: () => void;
-      onresult: ((e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => void) | null;
-      onerror: (() => void) | null;
-      onend: (() => void) | null;
-    }) | undefined;
+    // Use unknown cast via intermediate to avoid Window type conflict
+    const win = window as unknown as {
+      SpeechRecognition?: new () => {
+        lang: string; interimResults: boolean; maxAlternatives: number;
+        start(): void; stop(): void;
+        onresult: ((e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => void) | null;
+        onerror: (() => void) | null;
+        onend: (() => void) | null;
+      };
+      webkitSpeechRecognition?: new () => {
+        lang: string; interimResults: boolean; maxAlternatives: number;
+        start(): void; stop(): void;
+        onresult: ((e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => void) | null;
+        onerror: (() => void) | null;
+        onend: (() => void) | null;
+      };
+    };
+    const SRClass = win.SpeechRecognition || win.webkitSpeechRecognition;
 
     if (!SRClass) return;
 
