@@ -22,13 +22,14 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   const startListening = useCallback(() => {
     if (!isSupported) return;
 
-    type SRConstructor = new () => SpeechRecognition;
-    const w = window as unknown as { SpeechRecognition?: SRConstructor; webkitSpeechRecognition?: SRConstructor };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
     const SRClass = w.SpeechRecognition || w.webkitSpeechRecognition;
 
     if (!SRClass) return;
 
-    const recognition = new SRClass();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition: any = new SRClass();
     recognition.lang = "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
