@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 type State = "idle" | "listening" | "processing" | "done" | "error";
 
@@ -14,35 +14,62 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
   const [transcript, setTranscript] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+
+  // Use refs so callbacks always see latest values without stale closure issues
+  const recognitionRef = useRef<{ stop: () => void; abort: () => void } | null>(null);
+  const stoppedIntentionallyRef = useRef(false);
 
   const isSupported = typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
+  async function sendToAPI(text: string) {
+    try {
+      const res = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setResult(data);
+        setState("done");
+        onCreated?.(data);
+        setTimeout(() => { setState("idle"); setResult(null); setTranscript(""); }, 4000);
+      } else {
+        setState("error");
+        setErrorMsg("Couldn't create item. Try again.");
+        setTimeout(() => setState("idle"), 3000);
+      }
+    } catch {
+      setState("error");
+      setErrorMsg("Network error. Try again.");
+      setTimeout(() => setState("idle"), 3000);
+    }
+  }
+
   const startListening = useCallback(() => {
     if (!isSupported) return;
 
-    // Use unknown cast via intermediate to avoid Window type conflict
     const win = window as unknown as {
       SpeechRecognition?: new () => {
         lang: string; interimResults: boolean; maxAlternatives: number;
-        start(): void; stop(): void;
+        start(): void; stop(): void; abort(): void;
         onresult: ((e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => void) | null;
-        onerror: (() => void) | null;
+        onerror: ((e: { error: string }) => void) | null;
         onend: (() => void) | null;
       };
       webkitSpeechRecognition?: new () => {
         lang: string; interimResults: boolean; maxAlternatives: number;
-        start(): void; stop(): void;
+        start(): void; stop(): void; abort(): void;
         onresult: ((e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => void) | null;
-        onerror: (() => void) | null;
+        onerror: ((e: { error: string }) => void) | null;
         onend: (() => void) | null;
       };
     };
     const SRClass = win.SpeechRecognition || win.webkitSpeechRecognition;
-
     if (!SRClass) return;
 
+    stoppedIntentionallyRef.current = false;
     const recognition = new SRClass();
     recognition.lang = "en-US";
     recognition.interimResults = false;
@@ -54,49 +81,32 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
     setResult(null);
     setErrorMsg("");
 
-    async function sendToAPI(text: string) {
-      try {
-        const res = await fetch("/api/voice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
-        const data = await res.json();
-        if (data.ok) {
-          setResult(data);
-          setState("done");
-          onCreated?.(data);
-          setTimeout(() => { setState("idle"); setResult(null); setTranscript(""); }, 4000);
-        } else {
-          setState("error");
-          setErrorMsg("Couldn't create item. Try again.");
-        }
-      } catch {
-        setState("error");
-        setErrorMsg("Network error. Try again.");
-      }
-    }
-
-    recognition.onresult = (event: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
+    recognition.onresult = (event) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
       setState("processing");
       sendToAPI(text);
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (e) => {
+      // "aborted" fires when we call stop() intentionally — ignore it
+      if (e.error === "aborted" || stoppedIntentionallyRef.current) return;
       setState("error");
       setErrorMsg("Couldn't hear you. Try again.");
+      setTimeout(() => setState("idle"), 3000);
     };
 
     recognition.onend = () => {
-      if (state === "listening") setState("idle");
+      // If still in listening state after end (no result), go back to idle
+      setState((prev) => prev === "listening" ? "idle" : prev);
     };
 
     recognition.start();
-  }, [isSupported, state, onCreated]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSupported]);
 
   function stop() {
+    stoppedIntentionallyRef.current = true;
     recognitionRef.current?.stop();
     setState("idle");
   }
@@ -105,7 +115,6 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
 
   return (
     <div className="relative flex flex-col items-center">
-      {/* Main mic button */}
       <button
         type="button"
         onClick={state === "listening" ? stop : startListening}
@@ -141,7 +150,6 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
         )}
       </button>
 
-      {/* Status text */}
       {state === "listening" && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg border border-coral/30 bg-canvas px-3 py-1.5 text-xs text-coral shadow-sm">
           Listening… tap to stop
