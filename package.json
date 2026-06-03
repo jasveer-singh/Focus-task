@@ -10,6 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
     "@auth/prisma-adapter": "^2.7.4",
     "@prisma/client": "^6.3.1",
     "github-slugger": "^2.0.0",

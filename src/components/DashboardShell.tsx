@@ -6,7 +6,9 @@ import CalendarSyncPanel from "@/components/CalendarSyncPanel";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import ProjectsApp from "@/components/ProjectsApp";
+import PushSetup from "@/components/PushSetup";
 import TaskApp from "@/components/TaskApp";
+import VoiceButton from "@/components/VoiceButton";
 import { AccountProvider, useAccounts } from "@/context/AccountContext";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 import { TYPE_META } from "@/lib/accounts";
@@ -142,6 +144,9 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
 
         {/* Active account pills */}
         <AccountPills />
+
+        {/* Push notification opt-in */}
+        <PushSetup />
       </aside>
 
       {/* ── Mobile top bar ────────────────────────────────────────────────── */}
@@ -172,9 +177,12 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
 
       {/* ── Main content ──────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 bg-canvas pt-12 lg:pt-0">
-        <div className="border-b border-hairline px-8 py-5 lg:px-10">
-          <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{activeMeta.label}</p>
-          <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">{activeMeta.description}</h2>
+        <div className="flex items-center justify-between border-b border-hairline px-8 py-5 lg:px-10">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{activeMeta.label}</p>
+            <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">{activeMeta.description}</h2>
+          </div>
+          <VoiceButton onCreated={() => { /* modules re-fetch on next render */ }} />
         </div>
 
         {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
