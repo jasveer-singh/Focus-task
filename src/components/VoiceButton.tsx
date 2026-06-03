@@ -41,6 +41,29 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
     setResult(null);
     setErrorMsg("");
 
+    async function sendToAPI(text: string) {
+      try {
+        const res = await fetch("/api/voice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          setResult(data);
+          setState("done");
+          onCreated?.(data);
+          setTimeout(() => { setState("idle"); setResult(null); setTranscript(""); }, 4000);
+        } else {
+          setState("error");
+          setErrorMsg("Couldn't create item. Try again.");
+        }
+      } catch {
+        setState("error");
+        setErrorMsg("Network error. Try again.");
+      }
+    }
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
@@ -58,30 +81,7 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
     };
 
     recognition.start();
-  }, [isSupported, state]);
-
-  async function sendToAPI(text: string) {
-    try {
-      const res = await fetch("/api/voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setResult(data);
-        setState("done");
-        onCreated?.(data);
-        setTimeout(() => { setState("idle"); setResult(null); setTranscript(""); }, 4000);
-      } else {
-        setState("error");
-        setErrorMsg("Couldn't create item. Try again.");
-      }
-    } catch {
-      setState("error");
-      setErrorMsg("Network error. Try again.");
-    }
-  }
+  }, [isSupported, state, onCreated]);
 
   function stop() {
     (recognitionRef.current as SpeechRecognition | null)?.stop();
@@ -136,7 +136,7 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
       )}
       {state === "processing" && transcript && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 max-w-[200px] rounded-lg border border-hairline bg-canvas px-3 py-1.5 text-center text-xs text-ink-muted shadow-sm">
-          "{transcript}"
+          &quot;{transcript}&quot;
         </div>
       )}
       {state === "done" && result && (
