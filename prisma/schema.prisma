@@ -113,8 +113,9 @@ model Task {
   projectId String?
   title     String
   notes     String    @default("")
-  completed Boolean   @default(false)
-  pinned    Boolean   @default(false)
+  completed  Boolean   @default(false)
+  inProgress Boolean   @default(false)
+  pinned     Boolean   @default(false)
   dueAt     DateTime?
   checklist Json?
   createdAt DateTime  @default(now())

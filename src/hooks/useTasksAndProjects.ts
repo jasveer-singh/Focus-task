@@ -8,6 +8,7 @@ type DbTask = {
   title: string;
   notes: string;
   completed: boolean;
+  inProgress: boolean;
   pinned: boolean;
   dueAt: string | null;
   createdAt: string;

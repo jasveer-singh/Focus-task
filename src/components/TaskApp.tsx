@@ -236,17 +236,38 @@ export default function TaskApp() {
                   return (
                     <article
                       key={task.id}
-                      className={`animate-rise rounded-lg border bg-canvas p-5 transition ${overdue ? "border-coral/30" : "border-hairline"} ${task.completed ? "opacity-60" : ""}`}
+                      className={`animate-rise rounded-lg border bg-canvas p-5 transition ${
+                        overdue ? "border-coral/30" : task.inProgress ? "border-amber-300/60 bg-amber-50/30" : "border-hairline"
+                      } ${task.completed ? "opacity-60" : ""}`}
                       style={{ animationDelay: `${index * 40}ms` }}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-start gap-3">
+                          {/* 3-state cycle button: todo → in-progress → done */}
                           <button
                             type="button"
-                            aria-label={task.completed ? "Mark incomplete" : "Mark complete"}
-                            onClick={() => updateTask(task.id, { completed: !task.completed })}
-                            className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline bg-canvas hover:border-coral"}`}
-                          />
+                            title={task.completed ? "Mark incomplete" : task.inProgress ? "Mark complete" : "Mark in progress"}
+                            onClick={() => {
+                              if (task.completed) {
+                                updateTask(task.id, { completed: false, inProgress: false });
+                              } else if (task.inProgress) {
+                                updateTask(task.id, { completed: true, inProgress: false });
+                              } else {
+                                updateTask(task.id, { inProgress: true });
+                              }
+                            }}
+                            className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition flex items-center justify-center ${
+                              task.completed
+                                ? "border-coral bg-coral"
+                                : task.inProgress
+                                ? "border-amber-500 bg-amber-500"
+                                : "border-hairline bg-canvas hover:border-amber-400"
+                            }`}
+                          >
+                            {task.inProgress && !task.completed && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                            )}
+                          </button>
                           <div className="min-w-0">
                             <h3
                               className={`text-sm font-medium text-ink leading-snug cursor-pointer hover:text-coral transition ${task.completed ? "line-through text-ink-soft" : ""}`}
@@ -261,6 +282,11 @@ export default function TaskApp() {
                               )}
                               {task.pinned && (
                                 <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-ink-muted">Pinned</span>
+                              )}
+                              {task.inProgress && !task.completed && (
+                                <span className="rounded-pill bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-amber-700">
+                                  In progress
+                                </span>
                               )}
                               {task.projectId && (() => {
                                 const proj = projects.find((p) => p.id === task.projectId);
