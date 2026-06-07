@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
@@ -120,27 +120,6 @@ export default function TaskApp() {
     return dt.getTime() < Date.now();
   }
 
-  function sectionFor(task: Task) {
-    if (!task.dueAt) return "month";
-    const now = new Date();
-    const due = new Date(task.dueAt);
-    if (Number.isNaN(due.getTime())) return "month";
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const startOfNextWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    if (due >= startOfToday && due < startOfTomorrow) return "today";
-    if (due >= startOfToday && due < startOfNextWeek) return "week";
-    if (due >= startOfToday && due < startOfNextMonth) return "month";
-    return "month";
-  }
-
-  const sectionedTasks = useMemo(() => ({
-    today: sortedTasks.filter((t) => sectionFor(t) === "today"),
-    week:  sortedTasks.filter((t) => sectionFor(t) === "week"),
-    month: sortedTasks.filter((t) => sectionFor(t) === "month"),
-  }), [sortedTasks]);
-
   if (loading) {
     return (
       <section className="flex w-full flex-col gap-8 px-8 py-10 lg:px-10">
@@ -230,27 +209,13 @@ export default function TaskApp() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-6">
-        <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">Created tasks</p>
+      <div className="flex flex-col gap-3">
         {sortedTasks.length === 0 ? (
           <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
             No tasks yet. Add one to get started.
           </div>
         ) : (
-          ([
-            { key: "today", label: "Due today",      items: sectionedTasks.today },
-            { key: "week",  label: "Due this week",  items: sectionedTasks.week  },
-            { key: "month", label: "Due this month", items: sectionedTasks.month },
-          ] as const).map((section) => (
-            <div key={section.key} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{section.label}</h2>
-                <span className="text-xs text-ink-soft">{section.items.length} tasks</span>
-              </div>
-              {section.items.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-hairline-soft p-5 text-center text-xs text-ink-soft">Nothing here yet.</div>
-              ) : (
-                section.items.map((task, index) => {
+          sortedTasks.map((task, index) => {
                   const isOpen    = expanded[task.id];
                   const isEditing = editingId === task.id;
                   const preview   = clampPreview(task.notes);
@@ -367,9 +332,6 @@ export default function TaskApp() {
                     </article>
                   );
                 })
-              )}
-            </div>
-          ))
         )}
       </div>
     </section>
