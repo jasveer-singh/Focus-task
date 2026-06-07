@@ -69,7 +69,7 @@ export function useTasksAndProjects() {
     return toTask(t);
   }, []);
 
-  const updateTask = useCallback(async (id: string, patch: Partial<Pick<Task, "title" | "notes" | "completed" | "pinned" | "dueAt" | "projectId">>) => {
+  const updateTask = useCallback(async (id: string, patch: Partial<Pick<Task, "title" | "notes" | "completed" | "inProgress" | "pinned" | "dueAt" | "projectId">>) => {
     const res = await fetch(`/api/tasks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
