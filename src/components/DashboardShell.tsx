@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import CalendarSyncPanel from "@/components/CalendarSyncPanel";
+import TodayApp from "@/components/TodayApp";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import ProjectsApp from "@/components/ProjectsApp";
@@ -13,9 +14,10 @@ import { AccountProvider, useAccounts } from "@/context/AccountContext";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 import { TYPE_META } from "@/lib/accounts";
 
-type ModuleKey = "reminders" | "tasks" | "projects" | "agents" | "ideas" | "feedback" | "calendar";
+type ModuleKey = "today" | "reminders" | "tasks" | "projects" | "agents" | "ideas" | "feedback" | "calendar";
 
 const MODULES: Array<{ key: ModuleKey; label: string; description: string; dividerAfter?: boolean }> = [
+  { key: "today",     label: "Today",     description: "Your day at a glance"         },
   { key: "reminders", label: "Reminders", description: "Due queue and follow-ups"     },
   { key: "tasks",     label: "Tasks",     description: "Task capture and execution"   },
   { key: "projects",  label: "Projects",  description: "Track work across milestones", dividerAfter: true },
@@ -193,6 +195,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
           <VoiceButton onCreated={() => { /* modules re-fetch on next render */ }} />
         </div>
 
+        {activeModule === "today"      ? <TodayApp /> : null}
         {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
         {activeModule === "tasks"     ? <TaskApp /> : null}
         {activeModule === "projects"  ? <ProjectsApp /> : null}
