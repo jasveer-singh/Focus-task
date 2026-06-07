@@ -49,6 +49,7 @@ export default function TaskDrawer({
   onClose: () => void;
   onUpdate: (patch: Partial<Task> & { checklist?: ChecklistItem[] }) => void;
   onDelete: () => void;
+  onRemoveFromToday?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -289,6 +290,18 @@ export default function TaskDrawer({
               {editing ? "Save" : "Edit"}
             </button>
           </div>
+          {onRemoveFromToday && (
+            <button
+              type="button"
+              onClick={onRemoveFromToday}
+              className="flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-hairline hover:text-ink-muted mr-1"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+              Remove from today
+            </button>
+          )}
           <button
             type="button"
             onClick={onDelete}

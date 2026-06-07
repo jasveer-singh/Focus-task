@@ -361,6 +361,15 @@ export default function TodayApp() {
             }));
             setDrawerTask(null);
           }}
+          onRemoveFromToday={() => {
+            setPlan((prev) => ({
+              ...prev,
+              critical:  prev.critical.filter((id) => id !== drawerTask.task.id),
+              important: prev.important.filter((id) => id !== drawerTask.task.id),
+              light:     prev.light.filter((id) => id !== drawerTask.task.id),
+            }));
+            setDrawerTask(null);
+          }}
         />
       )}
 
