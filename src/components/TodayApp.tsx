@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
+import TaskDrawer, { type DrawerSection } from "@/components/TaskDrawer";
 import type { Task } from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -74,11 +75,21 @@ function AddToSectionModal({
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <div className="max-h-80 overflow-y-auto px-4 py-3 flex flex-col gap-2">
+        <div className="max-h-[60vh] overflow-y-auto px-4 py-3 flex flex-col gap-2">
           {availableTasks.length === 0 ? (
-            <p className="py-6 text-center text-sm text-ink-soft">No more tasks to add.</p>
+            <p className="py-6 text-center text-sm text-ink-soft">No tasks to add — all are already planned or you have none yet.</p>
           ) : (
-            availableTasks.map((t) => (
+            [...availableTasks]
+              .sort((a, b) => {
+                // Due today first, then overdue, then by created date
+                const todayMs = new Date().setHours(0,0,0,0);
+                const tomorrowMs = todayMs + 86400000;
+                const aScore = a.dueAt && new Date(a.dueAt).getTime() < tomorrowMs ? 0 : 1;
+                const bScore = b.dueAt && new Date(b.dueAt).getTime() < tomorrowMs ? 0 : 1;
+                if (aScore !== bScore) return aScore - bScore;
+                return b.createdAt - a.createdAt;
+              })
+              .map((t) => (
               <button
                 key={t.id}
                 type="button"
@@ -86,7 +97,10 @@ function AddToSectionModal({
                 className="w-full rounded-lg border border-hairline bg-canvas px-4 py-3 text-left transition hover:border-coral hover:bg-coral/5"
               >
                 <p className="text-sm font-medium text-ink">{t.title}</p>
-                {t.notes && <p className="mt-0.5 text-xs text-ink-muted line-clamp-1">{t.notes}</p>}
+                <div className="mt-0.5 flex items-center gap-2">
+                  {t.dueAt && <span className="text-xs text-ink-soft">{new Date(t.dueAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
+                  {t.notes && <span className="text-xs text-ink-muted line-clamp-1 truncate max-w-[220px]">{t.notes}</span>}
+                </div>
               </button>
             ))
           )}
@@ -135,7 +149,7 @@ function CreateTaskModal({
 
 // ── Section components ─────────────────────────────────────────────────────────
 
-function CriticalSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void }) {
+function CriticalSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
   const done = tasks.filter((t) => t.completed).length;
   return (
     <div className="flex flex-col gap-3">
@@ -158,9 +172,13 @@ function CriticalSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onTog
       ) : (
         <div className="flex flex-col gap-2">
           {tasks.map((task) => (
-            <div key={task.id} className={`rounded-xl border p-5 transition ${task.completed ? "border-hairline opacity-50" : "border-coral/20 bg-coral/5"}`}>
+            <div
+              key={task.id}
+              className={`rounded-xl border p-5 transition cursor-pointer ${task.completed ? "border-hairline opacity-50" : "border-coral/20 bg-coral/5 hover:border-coral/40"}`}
+              onClick={() => onTaskClick(task)}
+            >
               <div className="flex items-start gap-3">
-                <button type="button" onClick={() => onToggle(task.id)} className={`mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition ${task.completed ? "border-coral bg-coral" : "border-coral/40 hover:border-coral"}`} />
+                <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition ${task.completed ? "border-coral bg-coral" : "border-coral/40 hover:border-coral"}`} />
                 <div>
                   <p className={`font-display text-lg font-normal leading-snug text-ink ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
                   {task.notes && <p className="mt-1 text-sm text-ink-muted leading-relaxed">{task.notes}</p>}
@@ -174,7 +192,7 @@ function CriticalSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onTog
   );
 }
 
-function ImportantSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void }) {
+function ImportantSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
   const done = tasks.filter((t) => t.completed).length;
   return (
     <div className="flex flex-col gap-3">
@@ -195,9 +213,13 @@ function ImportantSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onTo
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {tasks.map((task) => (
-            <div key={task.id} className={`rounded-xl border bg-canvas p-4 transition ${task.completed ? "opacity-50" : "border-hairline"}`}>
+            <div
+              key={task.id}
+              className={`rounded-xl border bg-canvas p-4 transition cursor-pointer ${task.completed ? "opacity-50 border-hairline" : "border-hairline hover:border-coral/40"}`}
+              onClick={() => onTaskClick(task)}
+            >
               <div className="flex items-start gap-2">
-                <button type="button" onClick={() => onToggle(task.id)} className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`} />
+                <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`} />
                 <div>
                   <p className={`text-sm font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
                   {task.notes && <p className="mt-0.5 text-xs text-ink-soft line-clamp-1">{task.notes}</p>}
@@ -211,7 +233,7 @@ function ImportantSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onTo
   );
 }
 
-function LightSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void }) {
+function LightSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
   const done = tasks.filter((t) => t.completed).length;
   return (
     <div className="flex flex-col gap-3">
@@ -232,9 +254,13 @@ function LightSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onToggle
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {tasks.map((task) => (
-            <div key={task.id} className={`rounded-xl border bg-surface-card p-3 transition ${task.completed ? "opacity-40" : "border-hairline"}`}>
+            <div
+              key={task.id}
+              className={`rounded-xl border bg-surface-card p-3 transition cursor-pointer ${task.completed ? "opacity-40 border-hairline" : "border-hairline hover:border-coral/40"}`}
+              onClick={() => onTaskClick(task)}
+            >
               <div className="flex items-start gap-2">
-                <button type="button" onClick={() => onToggle(task.id)} className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`} />
+                <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`} />
                 <p className={`text-xs font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
               </div>
             </div>
@@ -248,10 +274,11 @@ function LightSection({ tasks, onToggle, onAddClick }: { tasks: Task[]; onToggle
 // ── Root ───────────────────────────────────────────────────────────────────────
 
 export default function TodayApp() {
-  const { tasks, loading, updateTask, createTask } = useTasksAndProjects();
+  const { tasks, loading, updateTask, deleteTask, createTask } = useTasksAndProjects();
   const [plan, setPlan] = useState<DayPlan>(() => loadPlan());
   const [addingToSection, setAddingToSection] = useState<Section | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [drawerTask, setDrawerTask] = useState<{ task: Task; section: DrawerSection } | null>(null);
 
   // Persist plan whenever it changes
   useEffect(() => { savePlan(plan); }, [plan]);
@@ -270,7 +297,8 @@ export default function TodayApp() {
   const pct        = allPlanned > 0 ? Math.round((allDone / allPlanned) * 100) : 0;
 
   // Tasks available to add (not yet in any section)
-  const availableForSection = tasks.filter((t) => !plannedIds.has(t.id));
+  // All tasks not already in today's plan — no due-date filter
+  const availableForSection = tasks.filter((t) => !plannedIds.has(t.id) && !t.completed);
 
   function addToSection(section: Section, taskId: string) {
     setPlan((prev) => ({ ...prev, [section]: [...prev[section], taskId] }));
@@ -314,6 +342,28 @@ export default function TodayApp() {
 
   return (
     <>
+      {/* Task drawer */}
+      {drawerTask && (
+        <TaskDrawer
+          task={drawerTask.task}
+          section={drawerTask.section}
+          onClose={() => setDrawerTask(null)}
+          onUpdate={(patch) => {
+            updateTask(drawerTask.task.id, patch);
+          }}
+          onDelete={() => {
+            deleteTask(drawerTask.task.id);
+            setPlan((prev) => ({
+              ...prev,
+              critical:  prev.critical.filter((id) => id !== drawerTask.task.id),
+              important: prev.important.filter((id) => id !== drawerTask.task.id),
+              light:     prev.light.filter((id) => id !== drawerTask.task.id),
+            }));
+            setDrawerTask(null);
+          }}
+        />
+      )}
+
       {/* Modals */}
       {addingToSection && (
         <AddToSectionModal
@@ -373,29 +423,31 @@ export default function TodayApp() {
                 Light lifts as you go.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 rounded-full bg-coral px-6 py-3 text-sm font-medium text-white transition hover:bg-coral-active"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-              Add your first task
-            </button>
-            {availableForSection.length > 0 && (
+            <div className="flex flex-col items-center gap-3">
+              {/* Primary — move existing tasks */}
               <button
                 type="button"
                 onClick={() => setAddingToSection("critical")}
-                className="rounded-full border border-hairline px-5 py-2 text-sm text-ink-muted transition hover:border-coral hover:text-coral"
+                className="flex items-center gap-2 rounded-full bg-coral px-6 py-3 text-sm font-medium text-white transition hover:bg-coral-active"
               >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M2 7l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 Plan from existing tasks
               </button>
-            )}
+              {/* Secondary — create new */}
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="rounded-full border border-hairline px-5 py-2.5 text-sm text-ink-muted transition hover:border-coral hover:text-coral"
+              >
+                + Create new task
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-10">
-            <CriticalSection  tasks={criticalTasks}  onToggle={toggleTask} onAddClick={() => setAddingToSection("critical")}  />
-            <ImportantSection tasks={importantTasks} onToggle={toggleTask} onAddClick={() => setAddingToSection("important")} />
-            <LightSection     tasks={lightTasks}     onToggle={toggleTask} onAddClick={() => setAddingToSection("light")}     />
+            <CriticalSection  tasks={criticalTasks}  onToggle={toggleTask} onAddClick={() => setAddingToSection("critical")}  onTaskClick={(t) => setDrawerTask({ task: t, section: "critical" })}  />
+            <ImportantSection tasks={importantTasks} onToggle={toggleTask} onAddClick={() => setAddingToSection("important")} onTaskClick={(t) => setDrawerTask({ task: t, section: "important" })} />
+            <LightSection     tasks={lightTasks}     onToggle={toggleTask} onAddClick={() => setAddingToSection("light")}     onTaskClick={(t) => setDrawerTask({ task: t, section: "light" })}     />
 
             <div className="border-t border-hairline pt-4">
               <button type="button" onClick={reset} className="rounded-full border border-hairline px-4 py-1.5 text-xs text-ink-soft transition hover:border-coral hover:text-coral">
