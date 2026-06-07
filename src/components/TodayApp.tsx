@@ -164,7 +164,7 @@ function CriticalSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: 
           </button>
         </div>
       </div>
-      <div className="h-px bg-coral/40" />
+      <div className="h-[1.5px] bg-coral" />
       {tasks.length === 0 ? (
         <button type="button" onClick={onAddClick} className="rounded-xl border border-dashed border-coral/30 p-6 text-center text-sm text-ink-soft hover:border-coral/60 transition">
           Add your most important work here
@@ -174,12 +174,12 @@ function CriticalSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: 
           {tasks.map((task) => (
             <div
               key={task.id}
-              className={`rounded-xl border p-5 transition cursor-pointer ${task.completed ? "border-hairline opacity-50" : "border-coral/20 bg-coral/5 hover:border-coral/40"}`}
+              className={`rounded-xl border p-5 transition cursor-pointer ${task.completed ? "border-hairline opacity-50" : "border-[#e8cfc4] bg-[#fdf6f3] hover:border-coral/50"}`}
               onClick={() => onTaskClick(task)}
             >
               <div className="flex items-start gap-3">
-                <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition ${task.completed ? "border-coral bg-coral" : "border-coral/40 hover:border-coral"}`} />
-                <div>
+                <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition ${task.completed ? "border-coral bg-coral" : "border-[#d4a090] hover:border-coral"}`} />
+                <div className="flex-1 min-w-0">
                   <p className={`font-display text-lg font-normal leading-snug text-ink ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
                   {task.notes && <p className="mt-1 text-sm text-ink-muted leading-relaxed">{task.notes}</p>}
                 </div>
