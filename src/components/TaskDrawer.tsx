@@ -43,6 +43,7 @@ export default function TaskDrawer({
   onClose,
   onUpdate,
   onDelete,
+  onRemoveFromToday,
 }: {
   task: Task;
   section?: DrawerSection;
