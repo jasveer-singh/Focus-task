@@ -75,9 +75,17 @@ function AccountPills() {
 // ── Inner shell (needs AccountContext) ────────────────────────────────────────
 
 function Shell({ email, name }: { email?: string | null; name?: string | null }) {
-  const [activeModule, setActiveModule] = useState<ModuleKey>("reminders");
+  const [activeModule, setActiveModule] = useState<ModuleKey>(() => {
+    if (typeof window === "undefined") return "tasks";
+    return (localStorage.getItem("suru-active-module") as ModuleKey) || "tasks";
+  });
   const { visibleIds, activeAccountId } = useAccounts();
   useNotificationScheduler();
+
+  function navigateTo(mod: ModuleKey) {
+    setActiveModule(mod);
+    localStorage.setItem("suru-active-module", mod);
+  }
 
   const activeMeta = useMemo(
     () => MODULES.find((m) => m.key === activeModule) ?? MODULES[0],
@@ -112,7 +120,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
                 <div className="group relative">
                   <button
                     type="button"
-                    onClick={() => setActiveModule(mod.key)}
+                    onClick={() => navigateTo(mod.key)}
                     className={`w-full rounded-md px-3 py-2.5 text-left transition-colors pr-8 ${
                       active
                         ? "bg-white/20 text-white"
@@ -126,7 +134,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
                     type="button"
                     aria-label={`New item in ${mod.label}`}
                     onClick={() => {
-                      setActiveModule(mod.key);
+                      navigateTo(mod.key);
                       setTimeout(() => window.dispatchEvent(new Event("focus-new-task")), 50);
                     }}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/20"
