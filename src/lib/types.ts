@@ -8,6 +8,12 @@ export type Project = {
   createdAt: number;
 };
 
+export type ChecklistItem = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -17,6 +23,7 @@ export type Task = {
   dueAt: string | null;
   createdAt: number;
   projectId?: string | null;
+  checklist?: ChecklistItem[] | null;
 };
 
 export const TASKS_KEY    = "focus-tasks-v1";

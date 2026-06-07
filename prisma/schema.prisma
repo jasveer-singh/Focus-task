@@ -116,6 +116,7 @@ model Task {
   completed Boolean   @default(false)
   pinned    Boolean   @default(false)
   dueAt     DateTime?
+  checklist Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

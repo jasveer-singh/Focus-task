@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
+import TaskDrawer from "@/components/TaskDrawer";
 import { extractMarkdownUrls } from "@/lib/markdown";
 import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
 import { useTaskActions } from "@/hooks/useTaskActions";
@@ -29,6 +30,7 @@ export default function TaskApp() {
   const [editDueAt, setEditDueAt] = useState("");
   const [pendingPickTimeId, setPendingPickTimeId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [drawerTaskId, setDrawerTaskId] = useState<string | null>(null);
 
   useTaskActions((taskId) => setPendingPickTimeId(taskId));
 
@@ -128,8 +130,19 @@ export default function TaskApp() {
     );
   }
 
+  const drawerTask = drawerTaskId ? tasks.find((t) => t.id === drawerTaskId) ?? null : null;
+
   return (
     <>
+    {drawerTask && (
+      <TaskDrawer
+        task={drawerTask}
+        section="task"
+        onClose={() => setDrawerTaskId(null)}
+        onUpdate={(patch) => updateTask(drawerTask.id, patch)}
+        onDelete={() => { removeTask(drawerTask.id); setDrawerTaskId(null); }}
+      />
+    )}
     {showCreateModal && (
       <div
         className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
@@ -235,7 +248,10 @@ export default function TaskApp() {
                             className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline bg-canvas hover:border-coral"}`}
                           />
                           <div className="min-w-0">
-                            <h3 className={`text-sm font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>
+                            <h3
+                              className={`text-sm font-medium text-ink leading-snug cursor-pointer hover:text-coral transition ${task.completed ? "line-through text-ink-soft" : ""}`}
+                              onClick={() => setDrawerTaskId(task.id)}
+                            >
                               {task.title}
                             </h3>
                             <div className="mt-1 flex flex-wrap items-center gap-2">

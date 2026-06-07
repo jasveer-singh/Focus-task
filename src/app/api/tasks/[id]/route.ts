@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.pinned !== undefined && { pinned: body.pinned }),
       ...("dueAt" in body && { dueAt: body.dueAt ? new Date(body.dueAt) : null }),
       ...(body.projectId !== undefined && { projectId: body.projectId }),
+      ...(body.checklist !== undefined && { checklist: body.checklist }),
     },
   });
 

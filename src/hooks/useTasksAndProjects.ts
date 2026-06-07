@@ -12,6 +12,7 @@ type DbTask = {
   dueAt: string | null;
   createdAt: string;
   projectId: string | null;
+  checklist?: Array<{ id: string; text: string; done: boolean }> | null;
 };
 
 type DbProject = {
