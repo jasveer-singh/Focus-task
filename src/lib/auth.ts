@@ -41,7 +41,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) token.sub = user.id;
       return token;
-    }
+    },
+    // Always persist the latest Google tokens on every sign-in so the
+    // refresh token never goes stale (fixes "invalid_grant" on calendar sync)
+    async signIn({ account, user }) {
+      if (account?.provider === "google" && user?.id) {
+        try {
+          await prisma.account.updateMany({
+            where: { userId: user.id, provider: "google" },
+            data: {
+              ...(account.access_token  && { access_token:  account.access_token }),
+              ...(account.refresh_token && { refresh_token: account.refresh_token }),
+              ...(account.expires_at    && { expires_at:    account.expires_at }),
+              ...(account.scope         && { scope:         account.scope }),
+              ...(account.token_type    && { token_type:    account.token_type }),
+              ...(account.id_token      && { id_token:      account.id_token }),
+            },
+          });
+        } catch (err) {
+          console.error("[auth] Failed to update Google account tokens:", err);
+        }
+      }
+      return true;
+    },
   },
   providers: [
     // ── Dev-only: bypass Google OAuth with any email ────────────────────────
