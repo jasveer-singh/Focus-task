@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChecklistItem, Task } from "@/lib/types";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
+import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
 
 function buildId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -44,6 +45,7 @@ export default function TaskDrawer({
   onUpdate,
   onDelete,
   onRemoveFromToday,
+  projectName,
 }: {
   task: Task;
   section?: DrawerSection;
@@ -51,6 +53,7 @@ export default function TaskDrawer({
   onUpdate: (patch: Partial<Task> & { checklist?: ChecklistItem[] }) => void;
   onDelete: () => void;
   onRemoveFromToday?: () => void;
+  projectName?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -130,6 +133,14 @@ export default function TaskDrawer({
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
           {/* Title */}
+          {/* Labels */}
+          {(task.inProgress && !task.completed) || projectName ? (
+            <div className="flex flex-wrap gap-1.5">
+              {task.inProgress && !task.completed && <InProgressLabel />}
+              {projectName && <ProjectLabel title={projectName} />}
+            </div>
+          ) : null}
+
           {editing ? (
             <input
               autoFocus

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import TaskDrawer from "@/components/TaskDrawer";
+import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
 import { extractMarkdownUrls } from "@/lib/markdown";
 import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
 import { useTaskActions } from "@/hooks/useTaskActions";
@@ -138,6 +139,7 @@ export default function TaskApp() {
       <TaskDrawer
         task={drawerTask}
         section="task"
+        projectName={drawerTask.projectId ? projects.find((p) => p.id === drawerTask.projectId)?.title : undefined}
         onClose={() => setDrawerTaskId(null)}
         onUpdate={(patch) => updateTask(drawerTask.id, patch)}
         onDelete={() => { removeTask(drawerTask.id); setDrawerTaskId(null); }}
@@ -283,16 +285,10 @@ export default function TaskApp() {
                               {task.pinned && (
                                 <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-ink-muted">Pinned</span>
                               )}
-                              {task.inProgress && !task.completed && (
-                                <span className="rounded-pill bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-amber-700">
-                                  In progress
-                                </span>
-                              )}
+                              {task.inProgress && !task.completed && <InProgressLabel />}
                               {task.projectId && (() => {
                                 const proj = projects.find((p) => p.id === task.projectId);
-                                return proj ? (
-                                  <span className="rounded-pill border border-coral/30 px-2 py-0.5 text-[10px] font-medium text-coral/80">{proj.title}</span>
-                                ) : null;
+                                return proj ? <ProjectLabel title={proj.title} /> : null;
                               })()}
                             </div>
                             {task.notes ? (

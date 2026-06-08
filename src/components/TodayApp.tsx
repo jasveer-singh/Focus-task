@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
 import TaskDrawer, { type DrawerSection } from "@/components/TaskDrawer";
-import type { Task } from "@/lib/types";
+import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
+import type { Project, Task } from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -149,7 +150,7 @@ function CreateTaskModal({
 
 // ── Section components ─────────────────────────────────────────────────────────
 
-function CriticalSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
+function CriticalSection({ tasks, projects, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; projects: Project[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
   const done = tasks.filter((t) => t.completed).length;
   return (
     <div className="flex flex-col gap-3">
@@ -182,6 +183,12 @@ function CriticalSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: 
                 <div className="flex-1 min-w-0">
                   <p className={`font-display text-lg font-normal leading-snug text-ink ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
                   {task.notes && <p className="mt-1 text-sm text-ink-muted leading-relaxed">{task.notes}</p>}
+                  {(!task.completed) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {task.inProgress && <InProgressLabel />}
+                      {task.projectId && (() => { const p = projects.find((x) => x.id === task.projectId); return p ? <ProjectLabel title={p.title} /> : null; })()}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -192,7 +199,7 @@ function CriticalSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: 
   );
 }
 
-function ImportantSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
+function ImportantSection({ tasks, projects, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; projects: Project[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
   const done = tasks.filter((t) => t.completed).length;
   return (
     <div className="flex flex-col gap-3">
@@ -223,6 +230,12 @@ function ImportantSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks:
                 <div>
                   <p className={`text-sm font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
                   {task.notes && <p className="mt-0.5 text-xs text-ink-soft line-clamp-1">{task.notes}</p>}
+                  {!task.completed && (task.inProgress || task.projectId) && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {task.inProgress && <InProgressLabel />}
+                      {task.projectId && (() => { const p = projects.find((x) => x.id === task.projectId); return p ? <ProjectLabel title={p.title} /> : null; })()}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -233,7 +246,7 @@ function ImportantSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks:
   );
 }
 
-function LightSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
+function LightSection({ tasks, projects, onToggle, onAddClick, onTaskClick }: { tasks: Task[]; projects: Project[]; onToggle: (id: string) => void; onAddClick: () => void; onTaskClick: (task: Task) => void }) {
   const done = tasks.filter((t) => t.completed).length;
   return (
     <div className="flex flex-col gap-3">
@@ -261,7 +274,15 @@ function LightSection({ tasks, onToggle, onAddClick, onTaskClick }: { tasks: Tas
             >
               <div className="flex items-start gap-2">
                 <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`} />
-                <p className={`text-xs font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
+                <div>
+                  <p className={`text-xs font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
+                  {!task.completed && (task.inProgress || task.projectId) && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {task.inProgress && <InProgressLabel />}
+                      {task.projectId && (() => { const p = projects.find((x) => x.id === task.projectId); return p ? <ProjectLabel title={p.title} /> : null; })()}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -347,6 +368,7 @@ export default function TodayApp() {
         <TaskDrawer
           task={drawerTask.task}
           section={drawerTask.section}
+          projectName={drawerTask.task.projectId ? projects.find((p) => p.id === drawerTask.task.projectId)?.title : undefined}
           onClose={() => setDrawerTask(null)}
           onUpdate={(patch) => {
             updateTask(drawerTask.task.id, patch);
@@ -454,9 +476,9 @@ export default function TodayApp() {
           </div>
         ) : (
           <div className="flex flex-col gap-10">
-            <CriticalSection  tasks={criticalTasks}  onToggle={toggleTask} onAddClick={() => setAddingToSection("critical")}  onTaskClick={(t) => setDrawerTask({ task: t, section: "critical" })}  />
-            <ImportantSection tasks={importantTasks} onToggle={toggleTask} onAddClick={() => setAddingToSection("important")} onTaskClick={(t) => setDrawerTask({ task: t, section: "important" })} />
-            <LightSection     tasks={lightTasks}     onToggle={toggleTask} onAddClick={() => setAddingToSection("light")}     onTaskClick={(t) => setDrawerTask({ task: t, section: "light" })}     />
+            <CriticalSection  tasks={criticalTasks}  projects={projects} onToggle={toggleTask} onAddClick={() => setAddingToSection("critical")}  onTaskClick={(t) => setDrawerTask({ task: t, section: "critical" })}  />
+            <ImportantSection tasks={importantTasks} projects={projects} onToggle={toggleTask} onAddClick={() => setAddingToSection("important")} onTaskClick={(t) => setDrawerTask({ task: t, section: "important" })} />
+            <LightSection     tasks={lightTasks}     projects={projects} onToggle={toggleTask} onAddClick={() => setAddingToSection("light")}     onTaskClick={(t) => setDrawerTask({ task: t, section: "light" })}     />
 
             <div className="border-t border-hairline pt-4">
               <button type="button" onClick={reset} className="rounded-full border border-hairline px-4 py-1.5 text-xs text-ink-soft transition hover:border-coral hover:text-coral">

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
+import { InProgressLabel } from "@/components/TaskLabels";
 import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
 import { STATUS_META } from "@/lib/types";
 import type { Project, ProjectStatus, Task } from "@/lib/types";
@@ -268,6 +269,7 @@ function ProjectDetail({ project, tasks, onBack, onUpdateProject, onDeleteProjec
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         {dueLabel && <span className="text-xs text-ink-soft">{dueLabel}</span>}
                         {overdue && <span className="rounded-pill bg-coral/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-coral">Overdue</span>}
+                        {task.inProgress && !task.completed && <InProgressLabel />}
                       </div>
                       {task.notes && !isEditing && (
                         <button type="button" onClick={() => setExpandedId(expandedId === task.id ? null : task.id)} className="mt-1 text-xs text-ink-soft hover:text-ink transition">
