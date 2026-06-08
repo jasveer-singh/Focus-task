@@ -299,6 +299,19 @@ export default function TaskApp() {
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
+                          {!task.completed && (
+                            <button
+                              type="button"
+                              onClick={() => updateTask(task.id, { inProgress: !task.inProgress, ...(task.inProgress ? {} : { completed: false }) })}
+                              className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                                task.inProgress
+                                  ? "border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                  : "border-hairline text-ink-muted hover:border-amber-400 hover:text-amber-700"
+                              }`}
+                            >
+                              {task.inProgress ? "In progress" : "Start"}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => updateTask(task.id, { pinned: !task.pinned })}
