@@ -180,6 +180,57 @@ export async function createGoogleCalendarEvent(
   };
 }
 
+export async function updateGoogleCalendarEvent(
+  userId: string,
+  eventId: string,
+  input: {
+    title: string;
+    startAt: Date;
+    endAt: Date;
+  }
+) {
+  const accessToken = await getGoogleAccessTokenForUser(userId);
+
+  const response = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        summary: input.title,
+        start: { dateTime: input.startAt.toISOString() },
+        end: { dateTime: input.endAt.toISOString() },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Failed to update Google Calendar event: ${details}`);
+  }
+}
+
+export async function deleteGoogleCalendarEvent(userId: string, eventId: string) {
+  const accessToken = await getGoogleAccessTokenForUser(userId);
+
+  const response = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
+
+  // 404 means already deleted — treat as success
+  if (!response.ok && response.status !== 404) {
+    const details = await response.text();
+    throw new Error(`Failed to delete Google Calendar event: ${details}`);
+  }
+}
+
 export async function syncGoogleEventsToLocal(userId: string) {
   const googleEvents = await listGoogleCalendarEvents(userId);
 

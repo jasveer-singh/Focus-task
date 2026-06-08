@@ -295,7 +295,7 @@ function LightSection({ tasks, projects, onToggle, onAddClick, onTaskClick }: { 
 // ── Root ───────────────────────────────────────────────────────────────────────
 
 export default function TodayApp() {
-  const { tasks, loading, updateTask, deleteTask, createTask } = useTasksAndProjects();
+  const { tasks, projects, loading, updateTask, deleteTask, createTask } = useTasksAndProjects();
   const [plan, setPlan] = useState<DayPlan>(() => loadPlan());
   const [addingToSection, setAddingToSection] = useState<Section | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);

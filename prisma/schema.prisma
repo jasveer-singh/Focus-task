@@ -116,8 +116,9 @@ model Task {
   completed  Boolean   @default(false)
   inProgress Boolean   @default(false)
   pinned     Boolean   @default(false)
-  dueAt     DateTime?
-  checklist Json?
+  dueAt            DateTime?
+  checklist        Json?
+  calendarEventId  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
