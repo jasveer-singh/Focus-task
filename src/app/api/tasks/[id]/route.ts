@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGoogleCalendarEvent, updateGoogleCalendarEvent, deleteGoogleCalendarEvent } from "@/lib/calendar";
 
+// Fields whose changes should trigger a calendar event sync
+const CALENDAR_FIELDS = new Set(["title", "notes", "dueAt", "completed", "inProgress", "projectId", "checklist"]);
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,34 +21,48 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const updated = await prisma.task.update({
     where: { id },
     data: {
-      ...(body.title !== undefined && { title: body.title }),
-      ...(body.notes !== undefined && { notes: body.notes }),
-      ...(body.completed !== undefined && { completed: body.completed }),
+      ...(body.title      !== undefined && { title:      body.title }),
+      ...(body.notes      !== undefined && { notes:      body.notes }),
+      ...(body.completed  !== undefined && { completed:  body.completed }),
       ...(body.inProgress !== undefined && { inProgress: body.inProgress }),
-      ...(body.pinned !== undefined && { pinned: body.pinned }),
-      ...("dueAt" in body && { dueAt: body.dueAt ? new Date(body.dueAt) : null }),
-      ...(body.projectId !== undefined && { projectId: body.projectId }),
-      ...(body.checklist !== undefined && { checklist: body.checklist }),
+      ...(body.pinned     !== undefined && { pinned:     body.pinned }),
+      ...("dueAt" in body              && { dueAt:      body.dueAt ? new Date(body.dueAt) : null }),
+      ...(body.projectId  !== undefined && { projectId:  body.projectId }),
+      ...(body.checklist  !== undefined && { checklist:  body.checklist }),
     },
   });
 
-  // Sync to Google Calendar when title or dueAt changes
-  const titleChanged = body.title !== undefined && body.title !== task.title;
-  const dueAtChanged = "dueAt" in body;
+  // Decide whether a calendar sync is needed
+  const calendarRelevantChange = Object.keys(body).some((k) => CALENDAR_FIELDS.has(k));
 
-  if (titleChanged || dueAtChanged) {
+  if (calendarRelevantChange) {
     const newDueAt = updated.dueAt;
-    const newTitle = updated.title;
 
     try {
+      // Resolve project name
+      let projectName: string | null = null;
+      if (updated.projectId) {
+        const project = await prisma.project.findUnique({ where: { id: updated.projectId }, select: { title: true } });
+        projectName = project?.title ?? null;
+      }
+
+      const checklist = Array.isArray(updated.checklist)
+        ? (updated.checklist as Array<{ text: string; done: boolean }>)
+        : null;
+
       if (task.calendarEventId) {
         if (newDueAt) {
-          // Update existing event
+          // Update existing event with full context
           const end = new Date(newDueAt.getTime() + 30 * 60 * 1000);
           await updateGoogleCalendarEvent(session.user.id, task.calendarEventId, {
-            title: newTitle,
-            startAt: newDueAt,
-            endAt: end,
+            title:       updated.title,
+            startAt:     newDueAt,
+            endAt:       end,
+            notes:       updated.notes || null,
+            projectName,
+            checklist,
+            completed:   updated.completed,
+            inProgress:  updated.inProgress,
           });
         } else {
           // Due date removed — delete the calendar event
@@ -56,20 +73,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         // No existing event but now has a due date — create one
         const end = new Date(newDueAt.getTime() + 30 * 60 * 1000);
         const { externalId } = await createGoogleCalendarEvent(session.user.id, {
-          title: newTitle,
-          startAt: newDueAt,
-          endAt: end,
-          participants: [],
-          location: null,
-          meetLink: null,
+          title:       updated.title,
+          startAt:     newDueAt,
+          endAt:       end,
+          notes:       updated.notes || null,
+          projectName,
+          checklist,
+          completed:   updated.completed,
+          inProgress:  updated.inProgress,
         });
         if (externalId) {
           await prisma.task.update({ where: { id }, data: { calendarEventId: externalId } });
         }
       }
     } catch (err) {
-      // Calendar sync is best-effort — task update already saved, don't fail the request
-      console.error("[calendar] Failed to sync calendar event for task update:", err);
+      // Best-effort — task is already saved, don't fail the request
+      console.error(`[tasks/PATCH] Calendar sync failed for task ${id}:`, err instanceof Error ? err.message : err);
     }
   }
 
@@ -86,12 +105,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Delete calendar event if one was created
   if (task.calendarEventId) {
     try {
       await deleteGoogleCalendarEvent(session.user.id, task.calendarEventId);
     } catch (err) {
-      console.error("[calendar] Failed to delete calendar event on task delete:", err);
+      console.error(`[tasks/DELETE] Calendar event delete failed:`, err instanceof Error ? err.message : err);
     }
   }
 

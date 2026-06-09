@@ -132,18 +132,74 @@ export async function listGoogleCalendarEvents(userId: string) {
   return payload.items ?? [];
 }
 
+// Google Calendar colorId reference:
+//   1=lavender 2=sage 3=grape 4=flamingo 5=banana(yellow)
+//   6=tangerine 7=peacock 8=blueberry 9=basil 10=tomato(red) 11=graphite
+function taskColorId(opts: { inProgress: boolean; completed: boolean; overdue: boolean }): string {
+  if (opts.completed) return "10";   // tomato — done/closed
+  if (opts.inProgress) return "5";   // banana — in progress
+  if (opts.overdue) return "6";      // tangerine — overdue, not started
+  return "7";                        // peacock — normal task
+}
+
+function buildDescription(opts: {
+  notes?: string | null;
+  projectName?: string | null;
+  checklist?: Array<{ text: string; done: boolean }> | null;
+  completed: boolean;
+  inProgress: boolean;
+}): string {
+  const lines: string[] = [];
+
+  if (opts.projectName) lines.push(`📁 Project: ${opts.projectName}`);
+
+  const statusLabel = opts.completed ? "✅ Completed" : opts.inProgress ? "🔄 In progress" : "⬜ To do";
+  lines.push(`Status: ${statusLabel}`);
+
+  if (opts.checklist && opts.checklist.length > 0) {
+    lines.push("");
+    lines.push("Checklist:");
+    for (const item of opts.checklist) {
+      lines.push(`${item.done ? "☑" : "☐"} ${item.text}`);
+    }
+  }
+
+  if (opts.notes?.trim()) {
+    lines.push("");
+    lines.push("Notes:");
+    lines.push(opts.notes.trim());
+  }
+
+  lines.push("");
+  lines.push("— Created in Suru");
+
+  return lines.join("\n");
+}
+
+export type TaskCalendarInput = {
+  title: string;
+  startAt: Date;
+  endAt: Date;
+  notes?: string | null;
+  projectName?: string | null;
+  checklist?: Array<{ text: string; done: boolean }> | null;
+  completed?: boolean;
+  inProgress?: boolean;
+  // Legacy fields used by the CalendarEvent (meetings) route
+  participants?: string[];
+  location?: string | null;
+  meetLink?: string | null;
+};
+
 export async function createGoogleCalendarEvent(
   userId: string,
-  input: {
-    title: string;
-    startAt: Date;
-    endAt: Date;
-    participants: string[];
-    location?: string | null;
-    meetLink?: string | null;
-  }
+  input: TaskCalendarInput
 ) {
   const accessToken = await getGoogleAccessTokenForUser(userId);
+
+  const completed  = input.completed  ?? false;
+  const inProgress = input.inProgress ?? false;
+  const overdue    = !completed && input.startAt.getTime() < Date.now();
 
   const response = await fetch(
     "https://www.googleapis.com/calendar/v3/calendars/primary/events",
@@ -156,14 +212,19 @@ export async function createGoogleCalendarEvent(
       body: JSON.stringify({
         summary: input.title,
         start: { dateTime: input.startAt.toISOString() },
-        end: { dateTime: input.endAt.toISOString() },
-        attendees: input.participants
-          .filter(Boolean)
-          .map((email) => ({ email: email.trim() })),
-        location: input.location || undefined,
-        description: input.meetLink
-          ? `Meet link: ${input.meetLink}`
-          : undefined
+        end:   { dateTime: input.endAt.toISOString() },
+        colorId: taskColorId({ inProgress, completed, overdue }),
+        description: buildDescription({
+          notes: input.meetLink ? `${input.notes ?? ""}\nMeet link: ${input.meetLink}`.trim() : input.notes,
+          projectName: input.projectName,
+          checklist: input.checklist,
+          completed,
+          inProgress,
+        }),
+        ...(input.participants?.length && {
+          attendees: input.participants.filter(Boolean).map((email) => ({ email: email.trim() })),
+        }),
+        ...(input.location && { location: input.location }),
       })
     }
   );
@@ -183,13 +244,13 @@ export async function createGoogleCalendarEvent(
 export async function updateGoogleCalendarEvent(
   userId: string,
   eventId: string,
-  input: {
-    title: string;
-    startAt: Date;
-    endAt: Date;
-  }
+  input: TaskCalendarInput
 ) {
   const accessToken = await getGoogleAccessTokenForUser(userId);
+
+  const completed  = input.completed  ?? false;
+  const inProgress = input.inProgress ?? false;
+  const overdue    = !completed && input.startAt.getTime() < Date.now();
 
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
@@ -202,7 +263,15 @@ export async function updateGoogleCalendarEvent(
       body: JSON.stringify({
         summary: input.title,
         start: { dateTime: input.startAt.toISOString() },
-        end: { dateTime: input.endAt.toISOString() },
+        end:   { dateTime: input.endAt.toISOString() },
+        colorId: taskColorId({ inProgress, completed, overdue }),
+        description: buildDescription({
+          notes: input.notes,
+          projectName: input.projectName,
+          checklist: input.checklist,
+          completed,
+          inProgress,
+        }),
       }),
     }
   );

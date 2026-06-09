@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
 
   console.log(`[tasks/POST] Task created id=${task.id}`);
 
-  // Push to Google Calendar if the task has a due date
   if (!dueAt) {
     console.log(`[tasks/POST] No dueAt — skipping calendar sync`);
     return NextResponse.json({ ...task, _calendarStatus: "skipped_no_due_date" }, { status: 201 });
@@ -44,37 +43,38 @@ export async function POST(req: NextRequest) {
 
   let calendarStatus = "not_attempted";
   try {
-    // Check if a Google account exists for this user
     const googleAccount = await prisma.account.findFirst({
       where: { userId: session.user.id, provider: "google" },
-      select: { id: true, access_token: true, refresh_token: true, expires_at: true, scope: true },
+      select: { id: true, refresh_token: true, scope: true },
     });
 
     if (!googleAccount) {
-      console.warn(`[tasks/POST] No Google account linked for user=${session.user.id} — skipping calendar sync`);
+      console.warn(`[tasks/POST] No Google account linked — skipping calendar sync`);
       calendarStatus = "skipped_no_google_account";
     } else {
-      console.log(`[tasks/POST] Google account found id=${googleAccount.id} scope="${googleAccount.scope}" has_refresh_token=${!!googleAccount.refresh_token}`);
+      // Resolve project name if task belongs to a project
+      let projectName: string | null = null;
+      if (task.projectId) {
+        const project = await prisma.project.findUnique({ where: { id: task.projectId }, select: { title: true } });
+        projectName = project?.title ?? null;
+      }
 
       const end = new Date(dueAt.getTime() + 30 * 60 * 1000);
-      console.log(`[tasks/POST] Calling createGoogleCalendarEvent start=${dueAt.toISOString()} end=${end.toISOString()}`);
-
       const { externalId } = await createGoogleCalendarEvent(session.user.id, {
         title: task.title,
         startAt: dueAt,
         endAt: end,
-        participants: [],
-        location: null,
-        meetLink: null,
+        notes: task.notes || null,
+        projectName,
+        checklist: null,
+        completed: false,
+        inProgress: false,
       });
 
       console.log(`[tasks/POST] Calendar event created externalId=${externalId}`);
 
       if (externalId) {
-        await prisma.task.update({
-          where: { id: task.id },
-          data: { calendarEventId: externalId },
-        });
+        await prisma.task.update({ where: { id: task.id }, data: { calendarEventId: externalId } });
         task.calendarEventId = externalId;
         calendarStatus = "synced";
       }
