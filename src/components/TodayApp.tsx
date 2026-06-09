@@ -46,17 +46,17 @@ function savePlan(plan: DayPlan) {
   localStorage.setItem("suru-today-plan", JSON.stringify(plan));
 }
 
-// ── Add task modal ─────────────────────────────────────────────────────────────
+// ── Choice modal — pick existing or create new ────────────────────────────────
 
-function AddToSectionModal({
+function ChoiceModal({
   section,
-  availableTasks,
-  onAdd,
+  onPickExisting,
+  onCreateNew,
   onClose,
 }: {
   section: Section;
-  availableTasks: Task[];
-  onAdd: (taskId: string) => void;
+  onPickExisting: () => void;
+  onCreateNew: () => void;
   onClose: () => void;
 }) {
   const meta = SECTION_META[section];
@@ -66,7 +66,7 @@ function AddToSectionModal({
       style={{ backgroundColor: "rgba(20,20,19,0.45)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-xl border border-hairline bg-canvas animate-fade">
+      <div className="w-full max-w-sm rounded-xl border border-hairline bg-canvas animate-fade">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div>
             <h2 className="font-display text-lg font-normal text-ink">Add to {meta.label}</h2>
@@ -76,36 +76,159 @@ function AddToSectionModal({
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto px-4 py-3 flex flex-col gap-2">
-          {availableTasks.length === 0 ? (
-            <p className="py-6 text-center text-sm text-ink-soft">No tasks to add — all are already planned or you have none yet.</p>
+        <div className="flex flex-col gap-3 px-6 py-5">
+          <button
+            type="button"
+            onClick={onPickExisting}
+            className="flex items-center gap-4 rounded-xl border border-hairline bg-canvas px-5 py-4 text-left transition hover:border-coral hover:bg-coral/5 group"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface-card transition group-hover:border-coral group-hover:bg-coral/10">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M5 7h6M5 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-medium text-ink">Add existing tasks</p>
+              <p className="text-xs text-ink-soft">Pick from tasks you&apos;ve already created</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={onCreateNew}
+            className="flex items-center gap-4 rounded-xl border border-hairline bg-canvas px-5 py-4 text-left transition hover:border-coral hover:bg-coral/5 group"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface-card transition group-hover:border-coral group-hover:bg-coral/10">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-medium text-ink">Create new task</p>
+              <p className="text-xs text-ink-soft">Start fresh and add it directly here</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Pick existing tasks (multi-select) ────────────────────────────────────────
+
+function PickExistingModal({
+  section,
+  availableTasks,
+  onAdd,
+  onClose,
+}: {
+  section: Section;
+  availableTasks: Task[];
+  onAdd: (taskIds: string[]) => void;
+  onClose: () => void;
+}) {
+  const meta = SECTION_META[section];
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const sorted = useMemo(() => [...availableTasks].sort((a, b) => {
+    const todayMs = new Date().setHours(0, 0, 0, 0);
+    const tomorrowMs = todayMs + 86400000;
+    const aScore = a.dueAt && new Date(a.dueAt).getTime() < tomorrowMs ? 0 : 1;
+    const bScore = b.dueAt && new Date(b.dueAt).getTime() < tomorrowMs ? 0 : 1;
+    if (aScore !== bScore) return aScore - bScore;
+    return b.createdAt - a.createdAt;
+  }), [availableTasks]);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function confirm() {
+    if (selected.size === 0) return;
+    onAdd([...selected]);
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(20,20,19,0.45)" }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-md rounded-xl border border-hairline bg-canvas animate-fade flex flex-col max-h-[80vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-hairline px-6 py-4 shrink-0">
+          <div>
+            <h2 className="font-display text-lg font-normal text-ink">Add to {meta.label}</h2>
+            <p className="text-xs text-ink-soft">Select one or more tasks</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-ink-soft hover:text-ink">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+
+        {/* Task list */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2">
+          {sorted.length === 0 ? (
+            <p className="py-6 text-center text-sm text-ink-soft">All tasks are already planned, or you have none yet.</p>
           ) : (
-            [...availableTasks]
-              .sort((a, b) => {
-                // Due today first, then overdue, then by created date
-                const todayMs = new Date().setHours(0,0,0,0);
-                const tomorrowMs = todayMs + 86400000;
-                const aScore = a.dueAt && new Date(a.dueAt).getTime() < tomorrowMs ? 0 : 1;
-                const bScore = b.dueAt && new Date(b.dueAt).getTime() < tomorrowMs ? 0 : 1;
-                if (aScore !== bScore) return aScore - bScore;
-                return b.createdAt - a.createdAt;
-              })
-              .map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => { onAdd(t.id); onClose(); }}
-                className="w-full rounded-lg border border-hairline bg-canvas px-4 py-3 text-left transition hover:border-coral hover:bg-coral/5"
-              >
-                <p className="text-sm font-medium text-ink">{t.title}</p>
-                <div className="mt-0.5 flex items-center gap-2">
-                  {t.dueAt && <span className="text-xs text-ink-soft">{new Date(t.dueAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
-                  {t.notes && <span className="text-xs text-ink-muted line-clamp-1 truncate max-w-[220px]">{t.notes}</span>}
-                </div>
-              </button>
-            ))
+            sorted.map((t) => {
+              const isSelected = selected.has(t.id);
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => toggle(t.id)}
+                  className={`w-full rounded-lg border px-4 py-3 text-left transition flex items-center gap-3 ${
+                    isSelected
+                      ? "border-coral bg-coral/5"
+                      : "border-hairline bg-canvas hover:border-coral/40 hover:bg-coral/3"
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition ${isSelected ? "border-coral bg-coral" : "border-hairline"}`}>
+                    {isSelected && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 5l3 3 4-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ink">{t.title}</p>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      {t.dueAt && <span className="text-xs text-ink-soft">{new Date(t.dueAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>}
+                      {t.notes && <span className="text-xs text-ink-muted line-clamp-1 truncate max-w-[200px]">{t.notes}</span>}
+                    </div>
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
+
+        {/* Footer confirm */}
+        {sorted.length > 0 && (
+          <div className="flex items-center justify-between border-t border-hairline px-6 py-4 shrink-0">
+            <span className="text-xs text-ink-soft">
+              {selected.size === 0 ? "Select tasks above" : `${selected.size} task${selected.size > 1 ? "s" : ""} selected`}
+            </span>
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted hover:border-coral hover:text-coral transition">Cancel</button>
+              <button
+                type="button"
+                onClick={confirm}
+                disabled={selected.size === 0}
+                className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Add {selected.size > 0 ? selected.size : ""} task{selected.size !== 1 ? "s" : ""}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -114,9 +237,11 @@ function AddToSectionModal({
 // ── Create task modal ──────────────────────────────────────────────────────────
 
 function CreateTaskModal({
+  sectionLabel,
   onSave,
   onClose,
 }: {
+  sectionLabel: string;
   onSave: (title: string, notes: string) => void;
   onClose: () => void;
 }) {
@@ -130,7 +255,10 @@ function CreateTaskModal({
     >
       <div className="w-full max-w-md rounded-xl border border-hairline bg-canvas animate-fade">
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
-          <h2 className="font-display text-lg font-normal text-ink">New task for today</h2>
+          <div>
+            <h2 className="font-display text-lg font-normal text-ink">New task</h2>
+            <p className="text-xs text-ink-soft">Will be added to {sectionLabel}</p>
+          </div>
           <button type="button" onClick={onClose} className="rounded-md p-1 text-ink-soft hover:text-ink">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
@@ -294,11 +422,17 @@ function LightSection({ tasks, projects, onToggle, onAddClick, onTaskClick }: { 
 
 // ── Root ───────────────────────────────────────────────────────────────────────
 
+// Mode for the section "+" button flow
+type AddMode =
+  | { step: "choice";   section: Section }
+  | { step: "existing"; section: Section }
+  | { step: "create";   section: Section };
+
 export default function TodayApp() {
   const { tasks, projects, loading, updateTask, deleteTask, createTask } = useTasksAndProjects();
   const [plan, setPlan] = useState<DayPlan>(() => loadPlan());
-  const [addingToSection, setAddingToSection] = useState<Section | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false); // header "New task" button
   const [drawerTask, setDrawerTask] = useState<{ task: Task; section: DrawerSection } | null>(null);
 
   // Persist plan whenever it changes
@@ -321,8 +455,8 @@ export default function TodayApp() {
   // All tasks not already in today's plan — no due-date filter
   const availableForSection = tasks.filter((t) => !plannedIds.has(t.id) && !t.completed);
 
-  function addToSection(section: Section, taskId: string) {
-    setPlan((prev) => ({ ...prev, [section]: [...prev[section], taskId] }));
+  function addToSection(section: Section, taskIds: string[]) {
+    setPlan((prev) => ({ ...prev, [section]: [...prev[section], ...taskIds] }));
   }
 
   function toggleTask(id: string) {
@@ -331,18 +465,12 @@ export default function TodayApp() {
     updateTask(id, { completed: !task.completed });
   }
 
-  async function handleCreateTask(title: string, notes: string) {
-    const today = new Date();
-    today.setHours(23, 59, 0, 0);
-    const task = await createTask({ title, notes, dueAt: today.toISOString() });
-    // Auto-add to critical if empty, otherwise leave unassigned
-    if (plan.critical.length === 0) {
-      setPlan((prev) => ({ ...prev, critical: [...prev.critical, task.id] }));
-    } else if (plan.important.length === 0) {
-      setPlan((prev) => ({ ...prev, important: [...prev.important, task.id] }));
-    } else {
-      setPlan((prev) => ({ ...prev, light: [...prev.light, task.id] }));
-    }
+  async function handleCreateTask(title: string, notes: string, targetSection?: Section) {
+    const eod = new Date();
+    eod.setHours(23, 59, 0, 0);
+    const task = await createTask({ title, notes, dueAt: eod.toISOString() });
+    const section = targetSection ?? (plan.critical.length === 0 ? "critical" : plan.important.length === 0 ? "important" : "light");
+    setPlan((prev) => ({ ...prev, [section]: [...prev[section], task.id] }));
   }
 
   function reset() {
@@ -395,18 +523,36 @@ export default function TodayApp() {
         />
       )}
 
-      {/* Modals */}
-      {addingToSection && (
-        <AddToSectionModal
-          section={addingToSection}
-          availableTasks={availableForSection}
-          onAdd={(id) => addToSection(addingToSection, id)}
-          onClose={() => setAddingToSection(null)}
+      {/* Section add flow */}
+      {addMode?.step === "choice" && (
+        <ChoiceModal
+          section={addMode.section}
+          onPickExisting={() => setAddMode({ step: "existing", section: addMode.section })}
+          onCreateNew={() => setAddMode({ step: "create", section: addMode.section })}
+          onClose={() => setAddMode(null)}
         />
       )}
+      {addMode?.step === "existing" && (
+        <PickExistingModal
+          section={addMode.section}
+          availableTasks={availableForSection}
+          onAdd={(ids) => addToSection(addMode.section, ids)}
+          onClose={() => setAddMode(null)}
+        />
+      )}
+      {addMode?.step === "create" && (
+        <CreateTaskModal
+          sectionLabel={SECTION_META[addMode.section].label}
+          onSave={(title, notes) => handleCreateTask(title, notes, addMode.section)}
+          onClose={() => setAddMode(null)}
+        />
+      )}
+
+      {/* Header "New task" button — goes straight to create, auto-assigns section */}
       {showCreateModal && (
         <CreateTaskModal
-          onSave={handleCreateTask}
+          sectionLabel="today"
+          onSave={(title, notes) => handleCreateTask(title, notes)}
           onClose={() => setShowCreateModal(false)}
         />
       )}
@@ -458,7 +604,7 @@ export default function TodayApp() {
               {/* Primary — move existing tasks */}
               <button
                 type="button"
-                onClick={() => setAddingToSection("critical")}
+                onClick={() => setAddMode({ step: "choice", section: "critical" })}
                 className="flex items-center gap-2 rounded-full bg-coral px-6 py-3 text-sm font-medium text-white transition hover:bg-coral-active"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M2 7l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -476,9 +622,9 @@ export default function TodayApp() {
           </div>
         ) : (
           <div className="flex flex-col gap-10">
-            <CriticalSection  tasks={criticalTasks}  projects={projects} onToggle={toggleTask} onAddClick={() => setAddingToSection("critical")}  onTaskClick={(t) => setDrawerTask({ task: t, section: "critical" })}  />
-            <ImportantSection tasks={importantTasks} projects={projects} onToggle={toggleTask} onAddClick={() => setAddingToSection("important")} onTaskClick={(t) => setDrawerTask({ task: t, section: "important" })} />
-            <LightSection     tasks={lightTasks}     projects={projects} onToggle={toggleTask} onAddClick={() => setAddingToSection("light")}     onTaskClick={(t) => setDrawerTask({ task: t, section: "light" })}     />
+            <CriticalSection  tasks={criticalTasks}  projects={projects} onToggle={toggleTask} onAddClick={() => setAddMode({ step: "choice", section: "critical" })}  onTaskClick={(t) => setDrawerTask({ task: t, section: "critical" })}  />
+            <ImportantSection tasks={importantTasks} projects={projects} onToggle={toggleTask} onAddClick={() => setAddMode({ step: "choice", section: "important" })} onTaskClick={(t) => setDrawerTask({ task: t, section: "important" })} />
+            <LightSection     tasks={lightTasks}     projects={projects} onToggle={toggleTask} onAddClick={() => setAddMode({ step: "choice", section: "light" })}     onTaskClick={(t) => setDrawerTask({ task: t, section: "light" })}     />
 
             <div className="border-t border-hairline pt-4">
               <button type="button" onClick={reset} className="rounded-full border border-hairline px-4 py-1.5 text-xs text-ink-soft transition hover:border-coral hover:text-coral">
