@@ -24,9 +24,6 @@ type FeedbackItem = {
   id: string;
   from: string;
   message: string;
-  receivedAt: string;
-  dueAt: string | null;
-  status: "new" | "planned" | "in-progress" | "done";
 };
 
 type IdeaItem = {
@@ -70,11 +67,9 @@ export default function ProductivityLayer({
   // Feedback form state
   const [feedbackFrom, setFeedbackFrom]         = useState("");
   const [feedbackMessage, setFeedbackMessage]   = useState("");
-  const [feedbackDueAt, setFeedbackDueAt]       = useState("");
-  const [editingFeedbackId, setEditingFeedbackId]       = useState<string | null>(null);
-  const [editingFeedbackFrom, setEditingFeedbackFrom]   = useState("");
-  const [editingFeedbackMsg, setEditingFeedbackMsg]     = useState("");
-  const [editingFeedbackDueAt, setEditingFeedbackDueAt] = useState("");
+  const [editingFeedbackId, setEditingFeedbackId]     = useState<string | null>(null);
+  const [editingFeedbackFrom, setEditingFeedbackFrom] = useState("");
+  const [editingFeedbackMsg, setEditingFeedbackMsg]   = useState("");
 
   // Idea form state
   const [ideaTitle, setIdeaTitle]               = useState("");
@@ -267,29 +262,22 @@ export default function ProductivityLayer({
     const res = await fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ from: feedbackFrom.trim(), message: feedbackMessage.trim(), dueAt: feedbackDueAt ? new Date(feedbackDueAt).toISOString() : null }),
+      body: JSON.stringify({ from: feedbackFrom.trim(), message: feedbackMessage.trim() }),
     });
     const item: FeedbackItem = await res.json();
     setFeedback((prev) => [item, ...prev]);
-    setFeedbackFrom(""); setFeedbackMessage(""); setFeedbackDueAt("");
-  }
-
-  async function updateFeedbackStatus(id: string, status: FeedbackItem["status"]) {
-    const res = await fetch(`/api/feedback/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
-    const updated: FeedbackItem = await res.json();
-    setFeedback((prev) => prev.map((f) => (f.id === id ? updated : f)));
+    setFeedbackFrom(""); setFeedbackMessage("");
   }
 
   function startFeedbackEdit(item: FeedbackItem) {
     setEditingFeedbackId(item.id);
     setEditingFeedbackFrom(item.from);
     setEditingFeedbackMsg(item.message);
-    setEditingFeedbackDueAt(item.dueAt ? item.dueAt.slice(0, 16) : "");
   }
 
   function cancelFeedbackEdit() {
     setEditingFeedbackId(null);
-    setEditingFeedbackFrom(""); setEditingFeedbackMsg(""); setEditingFeedbackDueAt("");
+    setEditingFeedbackFrom(""); setEditingFeedbackMsg("");
   }
 
   async function saveFeedbackEdit(id: string) {
@@ -297,7 +285,7 @@ export default function ProductivityLayer({
     const res = await fetch(`/api/feedback/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ from: editingFeedbackFrom.trim(), message: editingFeedbackMsg.trim(), dueAt: editingFeedbackDueAt ? new Date(editingFeedbackDueAt).toISOString() : null }),
+      body: JSON.stringify({ from: editingFeedbackFrom.trim(), message: editingFeedbackMsg.trim() }),
     });
     const updated: FeedbackItem = await res.json();
     setFeedback((prev) => prev.map((f) => (f.id === id ? updated : f)));
@@ -420,7 +408,6 @@ export default function ProductivityLayer({
           <div className="mt-3 space-y-2">
             <input value={feedbackFrom} onChange={(e) => setFeedbackFrom(e.target.value)} placeholder="Who gave this feedback?" className="w-full rounded-xl border border-mist-200 bg-mist-50 px-3 py-2 text-sm outline-none focus:border-accent-500" />
             <MarkdownEditor value={feedbackMessage} onChange={setFeedbackMessage} placeholder="What did they say?" minHeight={140} />
-            <input type="datetime-local" value={feedbackDueAt} onChange={(e) => setFeedbackDueAt(e.target.value)} className="w-full rounded-xl border border-mist-200 bg-mist-50 px-3 py-2 text-sm outline-none focus:border-accent-500" />
             <button type="button" onClick={addFeedback} className="rounded-xl bg-accent-500 px-3 py-2 text-xs font-semibold text-white hover:bg-accent-600">Add feedback</button>
           </div>
           <div className="mt-6">
@@ -437,7 +424,6 @@ export default function ProductivityLayer({
                     <div className="space-y-2">
                       <input value={editingFeedbackFrom} onChange={(e) => setEditingFeedbackFrom(e.target.value)} className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500" />
                       <MarkdownEditor value={editingFeedbackMsg} onChange={setEditingFeedbackMsg} minHeight={140} />
-                      <input type="datetime-local" value={editingFeedbackDueAt} onChange={(e) => setEditingFeedbackDueAt(e.target.value)} className="w-full rounded-xl border border-mist-200 bg-white px-3 py-2 text-sm outline-none focus:border-accent-500" />
                       <div className="flex flex-wrap gap-2">
                         <button type="button" onClick={() => saveFeedbackEdit(item.id)} className="rounded-xl bg-accent-500 px-3 py-2 text-xs font-semibold text-white hover:bg-accent-600">Save</button>
                         <button type="button" onClick={cancelFeedbackEdit} className="rounded-xl border border-mist-200 px-3 py-2 text-xs font-semibold text-ink-500">Cancel</button>
@@ -450,14 +436,8 @@ export default function ProductivityLayer({
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-ink-900">{item.from}</p>
                           <RenderedMarkdown source={item.message} className="markdown-rendered mt-1" />
-                          <p className="mt-1 text-xs text-ink-300">{new Date(item.receivedAt).toLocaleString()}</p>
                         </div>
                         <button type="button" onClick={() => startFeedbackEdit(item)} className="rounded-full border border-mist-200 px-3 py-1 text-xs font-semibold text-ink-500 hover:border-accent-500 hover:text-accent-500">Edit</button>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {(["new", "planned", "in-progress", "done"] as const).map((status) => (
-                          <button key={status} type="button" onClick={() => updateFeedbackStatus(item.id, status)} className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${item.status === status ? "border-accent-500 text-accent-600" : "border-mist-200 text-ink-400"}`}>{status}</button>
-                        ))}
                       </div>
                     </>
                   )}
