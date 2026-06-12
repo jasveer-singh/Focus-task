@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import TaskDrawer, { type DrawerSection } from "@/components/TaskDrawer";
 import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
 import type { Project, Task } from "@/lib/types";
@@ -265,7 +266,7 @@ function CreateTaskModal({
         </div>
         <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); if (title.trim()) { onSave(title.trim(), notes.trim()); onClose(); } }}>
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs to be done?" className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-coral" />
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" rows={3} className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-coral resize-none" />
+          <MarkdownEditor value={notes} onChange={setNotes} placeholder="Notes (optional) — Markdown supported…" minHeight={90} />
           <div className="flex justify-end gap-2 border-t border-hairline pt-4">
             <button type="button" onClick={onClose} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted hover:border-coral hover:text-coral">Cancel</button>
             <button type="submit" className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white hover:bg-coral-active">Add task</button>

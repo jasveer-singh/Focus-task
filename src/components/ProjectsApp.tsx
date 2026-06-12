@@ -48,7 +48,7 @@ function ProjectModal({ initial, onSave, onClose }: {
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-ink-muted">Description</label>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} placeholder="What is this project about?" className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-soft focus:border-coral resize-none" />
+            <MarkdownEditor value={desc} onChange={setDesc} placeholder="What is this project about? Markdown supported…" minHeight={90} />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-ink-muted">Status</label>
@@ -221,7 +221,7 @@ function ProjectDetail({ project, tasks, onBack, onUpdateProject, onDeleteProjec
           <div>
             <span className={`inline-flex items-center rounded-pill px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] ${meta.pill}`}>{meta.label}</span>
             <h1 className="mt-2 font-display text-3xl font-normal tracking-[-0.5px] text-ink md:text-4xl">{project.title}</h1>
-            {project.description && <p className="mt-2 max-w-xl text-sm text-ink-muted leading-relaxed">{project.description}</p>}
+            {project.description && <RenderedMarkdown source={project.description} className="markdown-rendered mt-2 max-w-xl text-sm text-ink-muted leading-relaxed" />}
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setShowEditProject(true)} className="rounded-md border border-hairline px-3 py-1.5 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral">Edit</button>
