@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared content for the "why Today works this way" philosophy.
@@ -14,29 +14,17 @@ const INTRO =
   "method's habit of sorting effort by weight, so the day has one clear win at the top " +
   "and the small stuff never crowds it out.";
 
-type Technique = { name: string; blurb: string };
-
-const TECHNIQUES: Technique[] = [
-  { name: "Eat the Frog", blurb: "Do your hardest task first — that's your Critical pick. The rest of the day feels easier." },
-  { name: "3/3/3 Method", blurb: "3 hours on one important project, 3 shorter urgent tasks, 3 maintenance items." },
-  { name: "Eisenhower Matrix", blurb: "Urgent + important → do it. Important not urgent → schedule. Not important → delegate or drop." },
-  { name: "Pomodoro", blurb: "Work a 25-min focused timer, take a 5-min break, repeat 4× then rest longer." },
-  { name: "Time Blocking", blurb: "Group similar work and assign each block a slot on the calendar, then stick to it." },
-  { name: "Seinfeld Strategy", blurb: "Mark each day you do the work and keep the streak — never miss two days in a row." },
-];
-
 function PhilosophyBody() {
   return (
     <div className="flex flex-col gap-5">
       <p className="text-sm leading-relaxed text-ink-muted">{INTRO}</p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {TECHNIQUES.map((t) => (
-          <div key={t.name} className="rounded-lg border border-hairline bg-canvas px-4 py-3">
-            <p className="text-sm font-medium text-ink">{t.name}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-ink-soft">{t.blurb}</p>
-          </div>
-        ))}
-      </div>
+      <img
+        src="/productivity-cheatsheet.png"
+        alt="Productivity cheat sheet: Pomodoro, 3/3/3 Method, Eisenhower Matrix, Eat the Frog, Seinfeld Strategy, and Time Blocking"
+        className="w-full rounded-lg border border-hairline"
+        loading="lazy"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
     </div>
   );
 }
@@ -87,46 +75,6 @@ export function PhilosophyInfoButton() {
         </div>
       )}
     </>
-  );
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// VARIANT B — Dismissible card between the header and the task sections.
-//   Hidden once dismissed (remembered in localStorage).
-// ═════════════════════════════════════════════════════════════════════════════
-
-const DISMISS_KEY = "suru-today-philosophy-dismissed";
-
-export function PhilosophyCard() {
-  const [dismissed, setDismissed] = useState(true); // assume hidden until we read storage
-
-  useEffect(() => {
-    try { setDismissed(localStorage.getItem(DISMISS_KEY) === "1"); }
-    catch { setDismissed(false); }
-  }, []);
-
-  if (dismissed) return null;
-
-  return (
-    <div className="rounded-xl border border-hairline bg-surface-card/60 p-6 animate-fade">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="font-display text-xl font-normal text-ink">Why Today is built this way</h2>
-          <p className="text-xs text-ink-soft">The philosophy behind Critical · Important · Light</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { try { localStorage.setItem(DISMISS_KEY, "1"); } catch {} setDismissed(true); }}
-          title="Dismiss"
-          className="rounded-md p-1 text-ink-soft transition hover:text-ink"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-        </button>
-      </div>
-      <div className="mt-4">
-        <PhilosophyBody />
-      </div>
-    </div>
   );
 }
 

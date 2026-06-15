@@ -6,7 +6,7 @@ import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import TaskDrawer, { type DrawerSection } from "@/components/TaskDrawer";
 import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
-import { PhilosophyInfoButton, PhilosophyCard, PhilosophyAbout } from "@/components/ProductivityPhilosophy";
+import { PhilosophyInfoButton, PhilosophyAbout } from "@/components/ProductivityPhilosophy";
 import type { Project, Task } from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -589,9 +589,6 @@ export default function TodayApp() {
             New task
           </button>
         </header>
-
-        {/* ===== VARIANT B: dismissible card (delete this block to remove) ===== */}
-        <PhilosophyCard />
 
         {/* Empty state */}
         {isEmpty ? (
