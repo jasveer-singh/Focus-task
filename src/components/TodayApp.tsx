@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
 import MarkdownEditor from "@/components/MarkdownEditor";
+import RenderedMarkdown from "@/components/RenderedMarkdown";
 import TaskDrawer, { type DrawerSection } from "@/components/TaskDrawer";
 import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
 import { PhilosophyInfoButton, PhilosophyCard, PhilosophyAbout } from "@/components/ProductivityPhilosophy";
@@ -312,7 +313,7 @@ function CriticalSection({ tasks, projects, onToggle, onAddClick, onTaskClick }:
                 <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-1 h-5 w-5 shrink-0 rounded-full border-2 transition ${task.completed ? "border-coral bg-coral" : "border-[#d4a090] hover:border-coral"}`} />
                 <div className="flex-1 min-w-0">
                   <p className={`font-display text-lg font-normal leading-snug text-ink ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
-                  {task.notes && <p className="mt-1 text-sm text-ink-muted leading-relaxed">{task.notes}</p>}
+                  {task.notes && <RenderedMarkdown source={task.notes} className="markdown-rendered mt-1 text-sm text-ink-muted leading-relaxed" />}
                   {(!task.completed) && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {task.inProgress && <InProgressLabel />}
@@ -359,7 +360,7 @@ function ImportantSection({ tasks, projects, onToggle, onAddClick, onTaskClick }
                 <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(task.id); }} className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border transition ${task.completed ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`} />
                 <div>
                   <p className={`text-sm font-medium text-ink leading-snug ${task.completed ? "line-through text-ink-soft" : ""}`}>{task.title}</p>
-                  {task.notes && <p className="mt-0.5 text-xs text-ink-soft line-clamp-1">{task.notes}</p>}
+                  {task.notes && <RenderedMarkdown source={task.notes} className="markdown-rendered mt-0.5 text-xs text-ink-soft line-clamp-1" />}
                   {!task.completed && (task.inProgress || task.projectId) && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {task.inProgress && <InProgressLabel />}
