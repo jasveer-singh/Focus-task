@@ -5,6 +5,7 @@ import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import TaskDrawer, { type DrawerSection } from "@/components/TaskDrawer";
 import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
+import { PhilosophyInfoButton, PhilosophyCard, PhilosophyAbout } from "@/components/ProductivityPhilosophy";
 import type { Project, Task } from "@/lib/types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -564,6 +565,8 @@ export default function TodayApp() {
           <div className="flex flex-wrap items-center gap-4">
             <h1 className="font-display text-4xl font-normal tracking-[-1px] text-ink">Today</h1>
             <span className="text-sm text-ink-soft">{today}</span>
+            {/* ===== VARIANT A: info button → modal (delete this line to remove) ===== */}
+            <PhilosophyInfoButton />
             {allPlanned > 0 && (
               <>
                 <span className="text-sm text-ink-soft">{allDone} of {allPlanned} done</span>
@@ -585,6 +588,9 @@ export default function TodayApp() {
             New task
           </button>
         </header>
+
+        {/* ===== VARIANT B: dismissible card (delete this block to remove) ===== */}
+        <PhilosophyCard />
 
         {/* Empty state */}
         {isEmpty ? (
@@ -632,6 +638,9 @@ export default function TodayApp() {
                 Reset to empty
               </button>
             </div>
+
+            {/* ===== VARIANT C: collapsible "About" at the bottom (delete this block to remove) ===== */}
+            <PhilosophyAbout />
           </div>
         )}
       </section>
