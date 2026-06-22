@@ -24,6 +24,7 @@ model User {
   tasks                 Task[]
   ideas                 Idea[]
   articles              Article[]
+  learningPlans         LearningPlan[]
   feedbackItems         FeedbackItem[]
   pushSubscriptions     PushSubscription[]
   scheduledNotifications ScheduledNotification[]
@@ -152,6 +153,20 @@ model Article {
   source    String   @default("")
   notes     String   @default("")
   read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LearningPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  subtitle  String   @default("")
+  phases    Json     @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
