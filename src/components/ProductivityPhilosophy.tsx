@@ -8,16 +8,9 @@ import { useState } from "react";
 // all render <PhilosophyBody />, so the copy lives in exactly one place.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const INTRO =
-  "Today splits your work into Critical, Important, and Light lifts on purpose. " +
-  "It blends two ideas: eat the frog — do the hardest thing first — and the 3/3/3 " +
-  "method's habit of sorting effort by weight, so the day has one clear win at the top " +
-  "and the small stuff never crowds it out.";
-
 function PhilosophyBody() {
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-sm leading-relaxed text-ink-muted">{INTRO}</p>
       <img
         src="/productivity-cheatsheet.png"
         alt="Productivity cheat sheet: Pomodoro, 3/3/3 Method, Eisenhower Matrix, Eat the Frog, Seinfeld Strategy, and Time Blocking"

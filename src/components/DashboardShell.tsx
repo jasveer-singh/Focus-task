@@ -6,15 +6,17 @@ import CalendarSyncPanel from "@/components/CalendarSyncPanel";
 import TodayApp from "@/components/TodayApp";
 import ProductivityLayer from "@/components/ProductivityLayer";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import LearnApp from "@/components/LearnApp";
 import ProjectsApp from "@/components/ProjectsApp";
 import PushSetup from "@/components/PushSetup";
+import SectionHelp from "@/components/SectionHelp";
 import TaskApp from "@/components/TaskApp";
 import VoiceButton from "@/components/VoiceButton";
 import { AccountProvider, useAccounts } from "@/context/AccountContext";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
 import { TYPE_META } from "@/lib/accounts";
 
-type ModuleKey = "today" | "reminders" | "tasks" | "projects" | "agents" | "ideas" | "feedback" | "calendar";
+type ModuleKey = "today" | "reminders" | "tasks" | "projects" | "agents" | "ideas" | "learn" | "feedback" | "calendar";
 
 const MODULES: Array<{ key: ModuleKey; label: string; description: string; dividerAfter?: boolean }> = [
   { key: "today",     label: "Today",     description: "Your day at a glance"         },
@@ -23,6 +25,7 @@ const MODULES: Array<{ key: ModuleKey; label: string; description: string; divid
   { key: "projects",  label: "Projects",  description: "Track work across milestones", dividerAfter: true },
   { key: "agents",    label: "Agents",    description: "Automated background workers", dividerAfter: true },
   { key: "ideas",     label: "Ideas",     description: "Inbox for notes and thoughts"  },
+  { key: "learn",     label: "Learn",     description: "Articles to read later"         },
   { key: "feedback",  label: "Feedback",  description: "Captured product feedback",    dividerAfter: true },
   { key: "calendar",  label: "Calendar",  description: "Google Calendar sync"          },
 ];
@@ -188,9 +191,12 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
       {/* ── Main content ──────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 bg-canvas pt-12 lg:pt-0">
         <div className="flex items-center justify-between border-b border-hairline px-8 py-5 lg:px-10">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{activeMeta.label}</p>
-            <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">{activeMeta.description}</h2>
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[1.5px] text-ink-muted">{activeMeta.label}</p>
+              <h2 className="mt-1 font-display text-2xl font-normal tracking-[-0.3px] text-ink">{activeMeta.description}</h2>
+            </div>
+            <SectionHelp sectionKey={activeModule} />
           </div>
           <VoiceButton onCreated={() => { /* modules re-fetch on next render */ }} />
         </div>
@@ -201,6 +207,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
         {activeModule === "projects"  ? <ProjectsApp /> : null}
         {activeModule === "agents"    ? <ComingSoon label="Agents" description="Automated background workers that run tasks on your behalf. Coming soon." /> : null}
         {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "learn"     ? <LearnApp /> : null}
         {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
         {activeModule === "calendar"  ? <CalendarSyncPanel /> : null}
       </main>

@@ -241,15 +241,19 @@ function PickExistingModal({
 
 function CreateTaskModal({
   sectionLabel,
+  showBucketPicker = false,
   onSave,
   onClose,
 }: {
   sectionLabel: string;
-  onSave: (title: string, notes: string) => void;
+  // When true, shows a Critical/Important/Light selector and passes the choice to onSave.
+  showBucketPicker?: boolean;
+  onSave: (title: string, notes: string, bucket?: Section) => void;
   onClose: () => void;
 }) {
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [bucket, setBucket] = useState<Section>("critical");
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
@@ -260,15 +264,41 @@ function CreateTaskModal({
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div>
             <h2 className="font-display text-lg font-normal text-ink">New task</h2>
-            <p className="text-xs text-ink-soft">Will be added to {sectionLabel}</p>
+            <p className="text-xs text-ink-soft">
+              {showBucketPicker ? "Choose where it goes today" : `Will be added to ${sectionLabel}`}
+            </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-md p-1 text-ink-soft hover:text-ink">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); if (title.trim()) { onSave(title.trim(), notes.trim()); onClose(); } }}>
+        <form className="flex flex-col gap-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); if (title.trim()) { onSave(title.trim(), notes.trim(), showBucketPicker ? bucket : undefined); onClose(); } }}>
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs to be done?" className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none focus:border-coral" />
           <MarkdownEditor value={notes} onChange={setNotes} placeholder="Notes (optional) — Markdown supported…" minHeight={90} />
+
+          {showBucketPicker && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-ink-muted">Bucket</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["critical", "important", "light"] as const).map((b) => {
+                  const selected = bucket === b;
+                  return (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => setBucket(b)}
+                      className={`rounded-md border px-3 py-2 text-xs font-medium transition ${
+                        selected ? "border-coral bg-coral/5 text-coral" : "border-hairline text-ink-muted hover:border-coral/40"
+                      }`}
+                    >
+                      {SECTION_META[b].label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 border-t border-hairline pt-4">
             <button type="button" onClick={onClose} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted hover:border-coral hover:text-coral">Cancel</button>
             <button type="submit" className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white hover:bg-coral-active">Add task</button>
@@ -551,11 +581,12 @@ export default function TodayApp() {
         />
       )}
 
-      {/* Header "New task" button — goes straight to create, auto-assigns section */}
+      {/* Header "New task" button — lets the user pick the bucket */}
       {showCreateModal && (
         <CreateTaskModal
           sectionLabel="today"
-          onSave={(title, notes) => handleCreateTask(title, notes)}
+          showBucketPicker
+          onSave={(title, notes, bucket) => handleCreateTask(title, notes, bucket)}
           onClose={() => setShowCreateModal(false)}
         />
       )}

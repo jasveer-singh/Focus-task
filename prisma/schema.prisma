@@ -23,6 +23,7 @@ model User {
   projects              Project[]
   tasks                 Task[]
   ideas                 Idea[]
+  articles              Article[]
   feedbackItems         FeedbackItem[]
   pushSubscriptions     PushSubscription[]
   scheduledNotifications ScheduledNotification[]
@@ -135,6 +136,22 @@ model Idea {
   title     String
   notes     String   @default("")
   sourceUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Article {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  url       String
+  source    String   @default("")
+  notes     String   @default("")
+  read      Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
