@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { enrichUrl } from "@/lib/enrich";
 
 export async function GET() {
   const session = await auth();
@@ -20,19 +21,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   if (!body.url?.trim()) return NextResponse.json({ error: "URL is required" }, { status: 400 });
 
-  // Derive a sensible source/title from the URL when not provided
-  let source = body.source?.trim() ?? "";
-  if (!source) {
-    try { source = new URL(body.url).hostname.replace(/^www\./, ""); } catch { source = ""; }
-  }
+  const url = body.url.trim();
+  const enriched = await enrichUrl(url);
 
   const article = await prisma.article.create({
     data: {
       userId: session.user.id,
-      title: (body.title?.trim() || body.url.trim()),
-      url: body.url.trim(),
-      source,
+      // User-provided title wins; else the enriched title
+      title: body.title?.trim() || enriched.title,
+      url,
+      source: enriched.source,
       notes: body.notes ?? "",
+      platform: enriched.platform,
+      thumbnail: enriched.thumbnail,
+      author: enriched.author,
+      type: enriched.type,
     },
   });
   return NextResponse.json(article, { status: 201 });

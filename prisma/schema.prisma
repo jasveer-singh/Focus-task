@@ -14,6 +14,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  captureToken  String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -153,6 +154,10 @@ model Article {
   source    String   @default("")
   notes     String   @default("")
   read      Boolean  @default(false)
+  platform  String   @default("")
+  thumbnail String   @default("")
+  author    String   @default("")
+  type      String   @default("link")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

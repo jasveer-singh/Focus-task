@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import LearningPlans from "@/components/LearningPlans";
+import CaptureSetup from "@/components/CaptureSetup";
 
 type Article = {
   id: string;
@@ -13,6 +14,10 @@ type Article = {
   source: string;
   notes: string;
   read: boolean;
+  platform: string;
+  thumbnail: string;
+  author: string;
+  type: string;
   createdAt: string;
 };
 
@@ -111,14 +116,17 @@ function ArticlesTab() {
         <span className="rounded-pill border border-hairline bg-surface-card px-3 py-1.5 text-xs font-medium text-ink-muted">
           {unread.length} to read
         </span>
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="flex items-center gap-1.5 rounded-md bg-coral px-4 py-2 text-sm font-medium text-white transition hover:bg-coral-active"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          Save article
-        </button>
+        <div className="flex items-center gap-2">
+          <CaptureSetup />
+          <button
+            type="button"
+            onClick={() => setShowForm((v) => !v)}
+            className="flex items-center gap-1.5 rounded-md bg-coral px-4 py-2 text-sm font-medium text-white transition hover:bg-coral-active"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            Save article
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -210,44 +218,61 @@ function ArticleCard({
   }
 
   return (
-    <article className={`rounded-lg border bg-canvas p-5 transition ${article.read ? "border-hairline opacity-60" : "border-hairline hover:border-coral/40"}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={() => onPatch(article.id, { read: !article.read })}
-            title={article.read ? "Mark unread" : "Mark read"}
-            className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition flex items-center justify-center ${article.read ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`}
-          >
-            {article.read && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l3 3 4-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-          </button>
-          <div className="min-w-0">
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noreferrer"
-              className={`text-sm font-medium leading-snug text-ink transition hover:text-coral ${article.read ? "line-through text-ink-soft" : ""}`}
-            >
-              {article.title}
-            </a>
-            {/* Visible link */}
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 flex items-center gap-1 text-xs text-coral/80 hover:text-coral break-all"
-            >
-              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" className="shrink-0"><path d="M6 10a3 3 0 0 0 4 0l2-2a3 3 0 0 0-4-4l-1 1M10 6a3 3 0 0 0-4 0L4 8a3 3 0 0 0 4 4l1-1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              {article.url}
-            </a>
-            {article.source && (
-              <span className="mt-1.5 inline-flex items-center rounded-pill border border-hairline px-2 py-0.5 text-[10px] font-medium text-ink-muted">
-                {article.source}
-              </span>
+    <article className={`rounded-lg border bg-canvas p-4 transition ${article.read ? "border-hairline opacity-60" : "border-hairline hover:border-coral/40"}`}>
+      <div className="flex items-start gap-4">
+        {/* Read toggle */}
+        <button
+          type="button"
+          onClick={() => onPatch(article.id, { read: !article.read })}
+          title={article.read ? "Mark unread" : "Mark read"}
+          className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition flex items-center justify-center ${article.read ? "border-coral bg-coral" : "border-hairline hover:border-coral"}`}
+        >
+          {article.read && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l3 3 4-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </button>
+
+        {/* Thumbnail */}
+        {article.thumbnail && (
+          <a href={article.url} target="_blank" rel="noreferrer" className="shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={article.thumbnail} alt="" className="h-16 w-24 rounded-md border border-hairline object-cover" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+          </a>
+        )}
+
+        {/* Content */}
+        <div className="min-w-0 flex-1">
+          {/* Platform + type badges */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {article.platform && <PlatformBadge platform={article.platform} />}
+            {article.type && article.type !== "link" && (
+              <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[1px] text-ink-muted">{article.type}</span>
             )}
-            {article.notes && <div className="mt-2"><RenderedMarkdown source={article.notes} className="markdown-rendered text-xs text-ink-muted leading-relaxed" /></div>}
+            {article.author && <span className="text-[11px] text-ink-soft">{article.author}</span>}
           </div>
+
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            className={`mt-1 block text-sm font-medium leading-snug text-ink transition hover:text-coral ${article.read ? "line-through text-ink-soft" : ""}`}
+          >
+            {article.title}
+          </a>
+
+          {/* Visible link */}
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 flex items-center gap-1 text-xs text-coral/80 hover:text-coral break-all"
+          >
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" className="shrink-0"><path d="M6 10a3 3 0 0 0 4 0l2-2a3 3 0 0 0-4-4l-1 1M10 6a3 3 0 0 0-4 0L4 8a3 3 0 0 0 4 4l1-1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+            {article.url}
+          </a>
+
+          {article.notes && <div className="mt-2"><RenderedMarkdown source={article.notes} className="markdown-rendered text-xs text-ink-muted leading-relaxed" /></div>}
         </div>
+
+        {/* Actions */}
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
@@ -266,5 +291,24 @@ function ArticleCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function PlatformBadge({ platform }: { platform: string }) {
+  const colors: Record<string, string> = {
+    YouTube:   "bg-red-50 text-red-600",
+    Instagram: "bg-pink-50 text-pink-600",
+    Substack:  "bg-orange-50 text-orange-600",
+    X:         "bg-ink/5 text-ink",
+    Medium:    "bg-ink/5 text-ink",
+    TikTok:    "bg-ink/5 text-ink",
+    LinkedIn:  "bg-blue-50 text-blue-600",
+    Spotify:   "bg-green-50 text-green-700",
+    GitHub:    "bg-ink/5 text-ink",
+  };
+  return (
+    <span className={`rounded-pill px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.5px] ${colors[platform] ?? "bg-surface-card text-ink-muted"}`}>
+      {platform}
+    </span>
   );
 }
