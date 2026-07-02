@@ -101,6 +101,7 @@ model Project {
   title       String
   description String   @default("")
   status      String   @default("planning")
+  space       String   @default("professional")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -122,6 +123,7 @@ model Task {
   dueAt            DateTime?
   checklist        Json?
   calendarEventId  String?
+  space            String    @default("professional")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -138,6 +140,7 @@ model Idea {
   title     String
   notes     String   @default("")
   sourceUrl String?
+  space     String   @default("professional")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -154,6 +157,7 @@ model Article {
   source    String   @default("")
   notes     String   @default("")
   read      Boolean  @default(false)
+  space     String   @default("professional")
   platform  String   @default("")
   thumbnail String   @default("")
   author    String   @default("")
@@ -172,6 +176,7 @@ model LearningPlan {
   title     String
   subtitle  String   @default("")
   phases    Json     @default("[]")
+  space     String   @default("professional")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

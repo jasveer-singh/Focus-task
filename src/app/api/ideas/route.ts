@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       title: body.title,
       notes: body.notes ?? "",
       sourceUrl: body.sourceUrl ?? null,
+      space: body.space === "personal" ? "personal" : "professional",
     },
   });
   return NextResponse.json(idea, { status: 201 });

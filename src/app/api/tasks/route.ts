@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       notes: body.notes ?? "",
       dueAt,
       projectId: body.projectId ?? null,
+      space: body.space === "personal" ? "personal" : "professional",
     },
   });
 

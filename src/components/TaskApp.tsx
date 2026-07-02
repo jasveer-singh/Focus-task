@@ -6,6 +6,8 @@ import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import TaskDrawer from "@/components/TaskDrawer";
 import { InProgressLabel, ProjectLabel } from "@/components/TaskLabels";
+import { SpacePicker } from "@/components/SpaceLock";
+import { usePersonalSpaceCtx } from "@/components/DashboardShell";
 import { extractMarkdownUrls } from "@/lib/markdown";
 import { cancelNotifications, getReminderWindows, scheduleNotifications } from "@/lib/notifications";
 import { useTaskActions } from "@/hooks/useTaskActions";
@@ -20,9 +22,11 @@ function clampPreview(text: string, limit = 140) {
 
 export default function TaskApp() {
   const { tasks, projects, loading, createTask, updateTask, deleteTask } = useTasksAndProjects();
+  const { unlocked } = usePersonalSpaceCtx();
 
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [space, setSpace] = useState<"professional" | "personal">("professional");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -52,11 +56,12 @@ export default function TaskApp() {
   }, [loading, pendingPickTimeId]);
 
   const sortedTasks = useMemo(() => {
-    return [...tasks].sort((a, b) => {
+    const visible = tasks.filter((t) => t.space !== "personal" || unlocked);
+    return [...visible].sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return b.createdAt - a.createdAt;
     });
-  }, [tasks]);
+  }, [tasks, unlocked]);
 
   const completedCount = tasks.filter((t) => t.completed).length;
 
@@ -65,12 +70,13 @@ export default function TaskApp() {
     setTitle("");
     setNotes("");
     setDueAt("");
+    setSpace("professional");
   }
 
   async function addTask() {
     if (!title.trim()) return;
     const resolvedDueAt = dueAt ? new Date(dueAt).toISOString() : null;
-    const task = await createTask({ title: title.trim(), notes: notes.trim(), dueAt: resolvedDueAt });
+    const task = await createTask({ title: title.trim(), notes: notes.trim(), dueAt: resolvedDueAt, space });
     if (resolvedDueAt) {
       scheduleNotifications({ sourceId: task.id, sourceType: "task", title: task.title, dueAt: resolvedDueAt, reminderWindows: getReminderWindows() });
     }
@@ -185,7 +191,7 @@ export default function TaskApp() {
               />
             </div>
             <div className="flex items-center justify-between border-t border-hairline pt-4">
-              <p className="text-xs text-ink-soft">Saved to your account.</p>
+              <SpacePicker value={space} onChange={setSpace} />
               <div className="flex gap-2">
                 <button type="button" onClick={closeCreateModal} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral">Cancel</button>
                 <button type="submit" className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active">Add task</button>

@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       title: body.title,
       description: body.description ?? "",
       status: body.status ?? "planning",
+      space: body.space === "personal" ? "personal" : "professional",
     },
   });
 

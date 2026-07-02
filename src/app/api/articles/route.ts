@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       url,
       source: enriched.source,
       notes: body.notes ?? "",
+      space: body.space === "personal" ? "personal" : "professional",
       platform: enriched.platform,
       thumbnail: enriched.thumbnail,
       author: enriched.author,

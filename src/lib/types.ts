@@ -6,6 +6,7 @@ export type Project = {
   description: string;
   status: ProjectStatus;
   createdAt: number;
+  space?: string;
 };
 
 export type ChecklistItem = {
@@ -26,6 +27,7 @@ export type Task = {
   projectId?: string | null;
   checklist?: ChecklistItem[] | null;
   calendarEventId?: string | null;
+  space?: string;
 };
 
 export const TASKS_KEY    = "focus-tasks-v1";

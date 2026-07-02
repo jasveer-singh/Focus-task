@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 import MarkdownEditor from "@/components/MarkdownEditor";
+import { SpacePicker } from "@/components/SpaceLock";
+import { usePersonalSpaceCtx } from "@/components/DashboardShell";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import LearningPlans from "@/components/LearningPlans";
 import CaptureSetup from "@/components/CaptureSetup";
@@ -14,6 +16,7 @@ type Article = {
   source: string;
   notes: string;
   read: boolean;
+  space: string;
   platform: string;
   thumbnail: string;
   author: string;
@@ -61,11 +64,13 @@ export default function LearnApp() {
 function ArticlesTab() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const { unlocked } = usePersonalSpaceCtx();
 
   const [showForm, setShowForm] = useState(false);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [space, setSpace] = useState<"professional" | "personal">("professional");
 
   useEffect(() => {
     fetch("/api/articles")
@@ -79,12 +84,12 @@ function ArticlesTab() {
     const res = await fetch("/api/articles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: url.trim(), title: title.trim(), notes: notes.trim() }),
+      body: JSON.stringify({ url: url.trim(), title: title.trim(), notes: notes.trim(), space }),
     });
     if (!res.ok) return;
     const article: Article = await res.json();
     setArticles((prev) => [article, ...prev]);
-    setUrl(""); setTitle(""); setNotes(""); setShowForm(false);
+    setUrl(""); setTitle(""); setNotes(""); setSpace("professional"); setShowForm(false);
   }
 
   async function patchArticle(id: string, patch: Partial<Article>) {
@@ -103,8 +108,9 @@ function ArticlesTab() {
     setArticles((prev) => prev.filter((x) => x.id !== id));
   }
 
-  const unread = articles.filter((a) => !a.read);
-  const read = articles.filter((a) => a.read);
+  const visible = articles.filter((a) => a.space !== "personal" || unlocked);
+  const unread = visible.filter((a) => !a.read);
+  const read = visible.filter((a) => a.read);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20 text-sm text-ink-soft">Loading…</div>;
@@ -143,14 +149,17 @@ function ArticlesTab() {
             <label className="text-xs font-medium text-ink-muted">Why save it? (optional)</label>
             <MarkdownEditor value={notes} onChange={setNotes} placeholder="Notes — Markdown supported…" minHeight={80} />
           </div>
-          <div className="flex justify-end gap-2 border-t border-hairline pt-3">
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted hover:border-coral hover:text-coral">Cancel</button>
-            <button type="button" onClick={addArticle} className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white hover:bg-coral-active">Save</button>
+          <div className="flex items-center justify-between border-t border-hairline pt-3">
+            <SpacePicker value={space} onChange={setSpace} />
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowForm(false)} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted hover:border-coral hover:text-coral">Cancel</button>
+              <button type="button" onClick={addArticle} className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white hover:bg-coral-active">Save</button>
+            </div>
           </div>
         </div>
       )}
 
-      {articles.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
           Nothing saved yet. Paste a link above to start your reading list.
         </div>

@@ -14,6 +14,7 @@ type DbTask = {
   createdAt: string;
   projectId: string | null;
   checklist?: Array<{ id: string; text: string; done: boolean }> | null;
+  space?: string;
 };
 
 type DbProject = {
@@ -22,6 +23,7 @@ type DbProject = {
   description: string;
   status: string;
   createdAt: string;
+  space?: string;
 };
 
 function toTask(t: DbTask): Task {
@@ -58,7 +60,7 @@ export function useTasksAndProjects() {
 
   // ── Tasks ──────────────────────────────────────────────────────────────────
 
-  const createTask = useCallback(async (data: { title: string; notes: string; dueAt: string | null; projectId?: string | null }) => {
+  const createTask = useCallback(async (data: { title: string; notes: string; dueAt: string | null; projectId?: string | null; space?: string }) => {
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -86,7 +88,7 @@ export function useTasksAndProjects() {
 
   // ── Projects ───────────────────────────────────────────────────────────────
 
-  const createProject = useCallback(async (data: { title: string; description: string; status: ProjectStatus }) => {
+  const createProject = useCallback(async (data: { title: string; description: string; status: ProjectStatus; space?: string }) => {
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

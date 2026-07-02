@@ -5,6 +5,8 @@ import { useState } from "react";
 import MarkdownEditor from "@/components/MarkdownEditor";
 import RenderedMarkdown from "@/components/RenderedMarkdown";
 import { InProgressLabel } from "@/components/TaskLabels";
+import { SpacePicker } from "@/components/SpaceLock";
+import { usePersonalSpaceCtx } from "@/components/DashboardShell";
 import { useTasksAndProjects } from "@/hooks/useTasksAndProjects";
 import { STATUS_META } from "@/lib/types";
 import type { Project, ProjectStatus, Task } from "@/lib/types";
@@ -25,12 +27,13 @@ function isOverdue(value: string | null) {
 
 function ProjectModal({ initial, onSave, onClose }: {
   initial?: Partial<Project>;
-  onSave: (title: string, description: string, status: ProjectStatus) => void;
+  onSave: (title: string, description: string, status: ProjectStatus, space?: "professional" | "personal") => void;
   onClose: () => void;
 }) {
   const [title, setTitle]   = useState(initial?.title ?? "");
   const [desc, setDesc]     = useState(initial?.description ?? "");
   const [status, setStatus] = useState<ProjectStatus>(initial?.status ?? "planning");
+  const [space, setSpace]   = useState<"professional" | "personal">("professional");
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ backgroundColor: "rgba(20,20,19,0.55)" }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -41,7 +44,7 @@ function ProjectModal({ initial, onSave, onClose }: {
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
-        <form className="overflow-y-auto flex flex-col gap-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); if (title.trim()) { onSave(title.trim(), desc.trim(), status); onClose(); } }}>
+        <form className="overflow-y-auto flex flex-col gap-4 px-6 py-5" onSubmit={(e) => { e.preventDefault(); if (title.trim()) { onSave(title.trim(), desc.trim(), status, initial?.id ? undefined : space); onClose(); } }}>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-ink-muted">Project name</label>
             <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Website redesign" className="rounded-md border border-hairline bg-canvas px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-soft focus:border-coral" />
@@ -60,9 +63,12 @@ function ProjectModal({ initial, onSave, onClose }: {
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-end gap-2 border-t border-hairline pt-4">
-            <button type="button" onClick={onClose} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral">Cancel</button>
-            <button type="submit" className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active">{initial?.id ? "Save changes" : "Create project"}</button>
+          <div className="flex items-center justify-between border-t border-hairline pt-4">
+            {!initial?.id ? <SpacePicker value={space} onChange={setSpace} /> : <span />}
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="rounded-md border border-hairline px-4 py-2 text-xs font-medium text-ink-muted transition hover:border-coral hover:text-coral">Cancel</button>
+              <button type="submit" className="rounded-md bg-coral px-4 py-2 text-xs font-medium text-white transition hover:bg-coral-active">{initial?.id ? "Save changes" : "Create project"}</button>
+            </div>
           </div>
         </form>
       </div>
@@ -133,10 +139,12 @@ function ProjectList({ projects, tasks, onSelect, onCreate, onDelete }: {
   projects: Project[];
   tasks: Task[];
   onSelect: (id: string) => void;
-  onCreate: (title: string, description: string, status: ProjectStatus) => void;
+  onCreate: (title: string, description: string, status: ProjectStatus, space?: "professional" | "personal") => void;
   onDelete: (id: string) => void;
 }) {
+  const { unlocked } = usePersonalSpaceCtx();
   const [showModal, setShowModal] = useState(false);
+  const visibleProjects = projects.filter((p) => p.space !== "personal" || unlocked);
 
   return (
     <section className="flex w-full flex-col gap-8 px-8 py-10 lg:px-10">
@@ -152,7 +160,7 @@ function ProjectList({ projects, tasks, onSelect, onCreate, onDelete }: {
         </button>
       </header>
 
-      {projects.length === 0 ? (
+      {visibleProjects.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-20 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-hairline">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="13" rx="2" stroke="#cc785c" strokeWidth="1.4"/><path d="M6 4V3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1M7 9h6M7 12h4" stroke="#cc785c" strokeWidth="1.4" strokeLinecap="round"/></svg>
@@ -162,7 +170,7 @@ function ProjectList({ projects, tasks, onSelect, onCreate, onDelete }: {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
+          {visibleProjects.map((p) => (
             <ProjectCard key={p.id} project={p} taskCount={tasks.filter((t) => t.projectId === p.id).length} onSelect={() => onSelect(p.id)} onDelete={() => onDelete(p.id)} />
           ))}
         </div>
@@ -357,7 +365,7 @@ export default function ProjectsApp() {
       projects={projects}
       tasks={tasks}
       onSelect={setSelectedId}
-      onCreate={(title, description, status) => createProject({ title, description, status })}
+      onCreate={(title, description, status, space) => createProject({ title, description, status, space })}
       onDelete={deleteProject}
     />
   );

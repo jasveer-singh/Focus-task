@@ -10,11 +10,17 @@ import LearnApp from "@/components/LearnApp";
 import ProjectsApp from "@/components/ProjectsApp";
 import PushSetup from "@/components/PushSetup";
 import SectionHelp from "@/components/SectionHelp";
+import SpaceLock from "@/components/SpaceLock";
 import TaskApp from "@/components/TaskApp";
 import VoiceButton from "@/components/VoiceButton";
 import { AccountProvider, useAccounts } from "@/context/AccountContext";
 import { useNotificationScheduler } from "@/hooks/useNotificationScheduler";
+import { usePersonalSpace } from "@/hooks/usePersonalSpace";
 import { TYPE_META } from "@/lib/accounts";
+import { createContext, useContext } from "react";
+
+export const PersonalSpaceContext = createContext<{ unlocked: boolean }>({ unlocked: false });
+export function usePersonalSpaceCtx() { return useContext(PersonalSpaceContext); }
 
 type ModuleKey = "today" | "reminders" | "tasks" | "projects" | "agents" | "ideas" | "learn" | "feedback" | "calendar";
 
@@ -85,6 +91,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
     return (localStorage.getItem("suru-active-module") as ModuleKey) || "tasks";
   });
   const { visibleIds, activeAccountId } = useAccounts();
+  const { unlocked, supported, unlock, lock } = usePersonalSpace();
   useNotificationScheduler();
 
   function navigateTo(mod: ModuleKey) {
@@ -98,6 +105,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
   );
 
   return (
+    <PersonalSpaceContext.Provider value={{ unlocked }}>
     <div className="mx-auto flex w-full max-w-[1400px] min-h-screen gap-0 px-0">
 
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
@@ -198,7 +206,10 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
             </div>
             <SectionHelp sectionKey={activeModule} />
           </div>
-          <VoiceButton onCreated={() => { /* modules re-fetch on next render */ }} />
+          <div className="flex items-center gap-2">
+            <SpaceLock unlocked={unlocked} supported={supported} onUnlock={unlock} onLock={lock} />
+            <VoiceButton onCreated={() => { /* modules re-fetch on next render */ }} />
+          </div>
         </div>
 
         {activeModule === "today"      ? <TodayApp /> : null}
@@ -212,6 +223,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
         {activeModule === "calendar"  ? <CalendarSyncPanel /> : null}
       </main>
     </div>
+    </PersonalSpaceContext.Provider>
   );
 }
 
