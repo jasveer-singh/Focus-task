@@ -176,6 +176,8 @@ model LearningPlan {
   title     String
   subtitle  String   @default("")
   phases    Json     @default("[]")
+  sections  Json     @default("[]")
+  type      String   @default("phases")
   space     String   @default("professional")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

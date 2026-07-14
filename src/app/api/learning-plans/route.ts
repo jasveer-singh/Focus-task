@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
       title: body.title.trim(),
       subtitle: body.subtitle?.trim() ?? "",
       phases: body.phases ?? [],
+      sections: body.sections ?? [],
+      type: body.type === "checklist" ? "checklist" : "phases",
     },
   });
   return NextResponse.json(plan, { status: 201 });
