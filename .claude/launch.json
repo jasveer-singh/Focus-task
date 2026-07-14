@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "portfolio", "runtimeExecutable": "node", "runtimeArgs": ["/Users/abhishektomar/Documents/portfolio/server.js"], "port": 4321 }
+  ]
+}

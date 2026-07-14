@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ChecklistPlan from "@/components/ChecklistPlan";
+import { AI_PM_PLAN } from "@/data/ai-pm-plan";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ export default function LearningPlans() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openChecklist, setOpenChecklist] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newSubtitle, setNewSubtitle] = useState("");
@@ -101,6 +104,10 @@ export default function LearningPlans() {
 
   const openPlan = plans.find((p) => p.id === openId) ?? null;
 
+  if (openChecklist) {
+    return <ChecklistPlan onBack={() => setOpenChecklist(false)} />;
+  }
+
   if (openPlan) {
     return (
       <PlanDetail
@@ -138,11 +145,10 @@ export default function LearningPlans() {
         </div>
       )}
 
-      {plans.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-hairline p-10 text-center text-sm text-ink-soft">
-          No learning plans yet. Create one to map out phases and weeks.
-        </div>
-      ) : (
+      {/* ── Pinned AI-PM plan ── */}
+      <AiPmCard onClick={() => setOpenChecklist(true)} />
+
+      {plans.length === 0 ? null : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {plans.map((p) => {
             const weeks = p.phases.flatMap((ph) => ph.weeks);
@@ -170,6 +176,51 @@ export default function LearningPlans() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── AI-PM pinned card ────────────────────────────────────────────────────────
+
+function AiPmCard({ onClick }: { onClick: () => void }) {
+  const [checked, setChecked] = useState<number>(0);
+  const total = AI_PM_PLAN.sections.flatMap((s) => s.items).length;
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("suru-checklist-plan-ai-pm-v1");
+      if (raw) setChecked((JSON.parse(raw) as string[]).length);
+    } catch { /* ignore */ }
+  }, []);
+
+  const pct = total ? Math.round((checked / total) * 100) : 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative rounded-xl border-2 border-coral/20 bg-canvas p-5 text-left transition hover:border-coral/50 w-full"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="rounded-pill bg-coral/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.5px] text-coral">Pinned</span>
+            <span className="rounded-pill bg-surface-card px-2 py-0.5 text-[10px] font-medium text-ink-muted">Checklist</span>
+          </div>
+          <p className="font-display text-lg font-normal text-ink leading-snug">{AI_PM_PLAN.title}</p>
+          <p className="mt-0.5 text-xs text-ink-muted leading-relaxed">{AI_PM_PLAN.subtitle}</p>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="mt-1 shrink-0 text-ink-muted">
+          <path d="M4 7h6M7 4l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-card">
+          <div className="h-full rounded-full bg-coral transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-xs font-medium text-coral">{checked}/{total}</span>
+      </div>
+      <p className="mt-1.5 text-[11px] text-ink-soft">{AI_PM_PLAN.sections.length} gaps · {total} items</p>
+    </button>
   );
 }
 
