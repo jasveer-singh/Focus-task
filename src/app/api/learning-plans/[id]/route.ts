@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.title    !== undefined && { title:    body.title }),
       ...(body.subtitle !== undefined && { subtitle: body.subtitle }),
       ...(body.phases   !== undefined && { phases:   body.phases }),
+      ...(body.sections !== undefined && { sections: body.sections }),
     },
   });
   return NextResponse.json(updated);
