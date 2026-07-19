@@ -90,6 +90,7 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
     if (typeof window === "undefined") return "tasks";
     return (localStorage.getItem("suru-active-module") as ModuleKey) || "tasks";
   });
+  const [moduleRefreshKey, setModuleRefreshKey] = useState(0);
   const { visibleIds, activeAccountId } = useAccounts();
   const { unlocked, supported, unlock, lock } = usePersonalSpace();
   useNotificationScheduler();
@@ -208,18 +209,25 @@ function Shell({ email, name }: { email?: string | null; name?: string | null })
           </div>
           <div className="flex items-center gap-2">
             <SpaceLock unlocked={unlocked} supported={supported} onUnlock={unlock} onLock={lock} />
-            <VoiceButton onCreated={() => { /* modules re-fetch on next render */ }} />
+            <VoiceButton onCreated={(result) => {
+              const typeToModule: Record<string, ModuleKey> = {
+                task: "tasks", project: "projects", idea: "ideas", feedback: "feedback",
+              };
+              const target = typeToModule[result.type];
+              if (target) navigateTo(target);
+              setModuleRefreshKey((k) => k + 1);
+            }} />
           </div>
         </div>
 
-        {activeModule === "today"      ? <TodayApp /> : null}
-        {activeModule === "reminders" ? <ProductivityLayer activeModule="reminders" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
-        {activeModule === "tasks"     ? <TaskApp /> : null}
-        {activeModule === "projects"  ? <ProjectsApp /> : null}
+        {activeModule === "today"      ? <TodayApp     key={moduleRefreshKey} /> : null}
+        {activeModule === "reminders" ? <ProductivityLayer key={moduleRefreshKey} activeModule="reminders" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "tasks"     ? <TaskApp      key={moduleRefreshKey} /> : null}
+        {activeModule === "projects"  ? <ProjectsApp  key={moduleRefreshKey} /> : null}
         {activeModule === "agents"    ? <ComingSoon label="Agents" description="Automated background workers that run tasks on your behalf. Coming soon." /> : null}
-        {activeModule === "ideas"     ? <ProductivityLayer activeModule="ideas" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
-        {activeModule === "learn"     ? <LearnApp /> : null}
-        {activeModule === "feedback"  ? <ProductivityLayer activeModule="feedback" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "ideas"     ? <ProductivityLayer key={moduleRefreshKey} activeModule="ideas" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
+        {activeModule === "learn"     ? <LearnApp     key={moduleRefreshKey} /> : null}
+        {activeModule === "feedback"  ? <ProductivityLayer key={moduleRefreshKey} activeModule="feedback" visibleAccountIds={visibleIds} activeAccountId={activeAccountId} /> : null}
         {activeModule === "calendar"  ? <CalendarSyncPanel /> : null}
       </main>
     </div>
