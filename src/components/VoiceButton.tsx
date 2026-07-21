@@ -29,8 +29,8 @@ export default function VoiceButton({ onCreated }: { onCreated?: (result: Result
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any;
+      // eslint-disable-next-line
+      let data: Result & { ok: boolean; error?: string };
       try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
       if (data.ok) {
         setResult(data);

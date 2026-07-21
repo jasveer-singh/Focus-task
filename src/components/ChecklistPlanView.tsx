@@ -98,7 +98,7 @@ export default function ChecklistPlanView({ plan, onBack, onToggleItem, onDelete
 
         {plan.sections.length === 0 && (
           <div className="px-8 py-16 text-center text-sm text-ink-soft">
-            No sections yet. Click "Edit plan" to add some.
+            No sections yet. Click &ldquo;Edit plan&rdquo; to add some.
           </div>
         )}
       </div>
